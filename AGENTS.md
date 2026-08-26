@@ -1,4 +1,4 @@
-# AGENTS.md — suspec-skills
+# AGENTS.md — skills
 
 This repository ships independently installable Markdown skills. A skill that works only beside its
 siblings is broken.
@@ -8,6 +8,8 @@ siblings is broken.
 - Keep each skill complete in `skills/<name>/SKILL.md`. Ship no appendix payloads.
 - Keep frontmatter `name` and directive `description`.
 - Preserve standalone operation and Markdown-only payloads.
+- Author no document. These skills return their result in chat; durable records belong to the
+  project or method that owns them.
 - Use untitled inline Markdown links with simple destinations. Reference-style, angle-wrapped,
   fragmented, and nested-parenthesis destinations are rejected.
 - Update the README catalog row with every skill addition or removal.

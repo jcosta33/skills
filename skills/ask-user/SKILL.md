@@ -1,9 +1,9 @@
 ---
-name: fork-me
+name: ask-user
 description: Intercept every agent-originated question and unresolved ambiguity that requires user input. ALWAYS use before asking for clarification, confirmation, permission, preference, approval, waiver, a decision, or any answer that work must wait for. Do not use when no user response is required; answer user-originated factual questions directly, ignore rhetorical questions, and settle discoverable or reversible matters yourself.
 ---
 
-# Fork Me
+# Ask User
 
 If the next step needs a user response, stop.
 

@@ -1,50 +1,29 @@
 name: method-gates
 
+# Structural checks over this catalog. Every gate is local: this repository depends on no sibling.
+
 on:
   push:
     branches: [main]
   pull_request:
   workflow_dispatch:
-    inputs:
-      canon_ref:
-        description: suspec ref for an integration snapshot
-        required: false
-        default: main
-      cli_ref:
-        description: suspec-cli ref for an integration snapshot
-        required: false
-        default: main
-      mcp_ref:
-        description: suspec-mcp ref for an integration snapshot
-        required: false
-        default: main
 
 permissions:
   contents: read
 
 jobs:
   local-gates:
-    if: github.event_name != 'workflow_dispatch'
     runs-on: ubuntu-latest
     steps:
-      - { name: suspec-skills, uses: actions/checkout@v4, with: { path: repo, fetch-depth: 0 } }
+      - { name: skills, uses: actions/checkout@v4, with: { path: repo, fetch-depth: 0 } }
 
       - name: Released changelog history
         env:
-          SUSPEC_SKILLS_HISTORY_BASE: "${{ github.event.pull_request.base.sha || github.event.before }}"
+          SKILLS_HISTORY_BASE: "${{ github.event.pull_request.base.sha || github.event.before }}"
         run: sh repo/scripts/lint-released-changelog.sh
 
       - name: Current catalog surfaces
         run: sh repo/scripts/lint-current.sh repo
 
-  method-gates:
-    if: github.event_name == 'workflow_dispatch'
-    runs-on: ubuntu-latest
-    steps:
-      - { name: suspec-skills, uses: actions/checkout@v4, with: { path: family/suspec-skills } }
-      - { name: suspec, uses: actions/checkout@v4, with: { repository: jcosta33/suspec, ref: "${{ inputs.canon_ref || 'main' }}", path: family/suspec } }
-      - { name: suspec-cli, uses: actions/checkout@v4, with: { repository: jcosta33/suspec-cli, ref: "${{ inputs.cli_ref || 'main' }}", path: family/suspec-cli } }
-      - { name: suspec-mcp, uses: actions/checkout@v4, with: { repository: jcosta33/suspec-mcp, ref: "${{ inputs.mcp_ref || 'main' }}", path: family/suspec-mcp } }
-
-      - name: Method gates
-        run: sh family/suspec/scripts/lint-all.sh "$GITHUB_WORKSPACE/family"
+      - name: Gate mutation test
+        run: sh repo/scripts/test-lint-current.sh repo

@@ -1,30 +1,22 @@
 #!/bin/sh
 set -eu
+export LC_ALL=C
 
 ROOT=${1:-$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)}
 ROOT=$(CDPATH= cd -- "$ROOT" && pwd)
 
-expected='bulletproof
+expected='ask-user
+bulletproof
+debloat
 demolition
-disrespec
 dissect
 drill
-fork-me
+panel
 promote
 remember
 revolver
 settle
-sus-audit
-sus-campaign
-sus-change-plan
-sus-inventory
-sus-panel
-sus-research
-sus-spec
-sus-task
 triple-check'
-artifact_creators='sus-audit sus-campaign sus-change-plan sus-inventory sus-panel sus-research sus-spec sus-task'
-universal_methods='bulletproof demolition disrespec dissect drill fork-me promote remember revolver settle triple-check'
 
 require_regex() {
   file=$1
@@ -164,63 +156,6 @@ validate_link_syntax() {
   fi
 }
 
-validate_artifact_frontmatter() {
-  file=$1
-  expected_type=$2
-  expected_prefix=$3
-  awk -v expected_type="$expected_type" -v expected_prefix="$expected_prefix" '
-    {
-      line = $0
-      sub(/^[[:space:]]+/, "", line)
-    }
-    NR == 1 && line == "---" {
-      in_yaml = 1
-      inside = 1
-      next
-    }
-    line == "```yaml" {
-      in_yaml = 1
-      next
-    }
-    in_yaml && line == "---" {
-      if (!inside) {
-        inside = 1
-        types = 0
-        ids = 0
-        type_value = ""
-        id_value = ""
-        next
-      }
-      if (types == 1 && ids == 1 && type_value == expected_type && index(id_value, expected_prefix) == 1) {
-        found += 1
-      }
-      inside = 0
-      next
-    }
-    inside && line ~ /^type:[[:space:]]+/ {
-      type_value = line
-      sub(/^type:[[:space:]]+/, "", type_value)
-      gsub(/^["\047]|["\047]$/, "", type_value)
-      types += 1
-      next
-    }
-    inside && line ~ /^id:[[:space:]]+/ {
-      id_value = line
-      sub(/^id:[[:space:]]+/, "", id_value)
-      gsub(/^["\047]|["\047]$/, "", id_value)
-      ids += 1
-      next
-    }
-    in_yaml && line == "```" {
-      in_yaml = 0
-      inside = 0
-    }
-    END {
-      if (found != 1) exit 1
-    }
-  ' "$file"
-}
-
 declaration_values() {
   root=$1
   key=$2
@@ -302,7 +237,7 @@ for document in "$ROOT/README.md" "$ROOT/AGENTS.md" $(find "$ROOT/docs" "$ROOT/s
 done
 
 for heading in '## Maintenance' '## Skill Format And Context Economy' '## Evidence And Inspection' \
-  '## Technical Decisions And Panels' '## Campaign Coordination' '## Research Method'; do
+  '## Technical Decisions And Panels' '## Review Practice'; do
   require_literal "$ROOT/docs/sources.md" "$heading" 'source ledger section missing'
 done
 for source in \
@@ -319,11 +254,7 @@ for source in \
   'https://proceedings.mlr.press/v235/du24e.html' \
   'https://aclanthology.org/2025.findings-acl.606/' \
   'https://aclanthology.org/2026.findings-eacl.268/' \
-  'https://aclanthology.org/2023.acl-long.792/' \
-  'https://learn.chatgpt.com/use-cases/follow-goals' \
-  'https://www.anthropic.com/engineering/effective-harnesses-for-long-running-agents' \
-  'https://www.microsoft.com/en-us/research/articles/magentic-one-a-generalist-multi-agent-system-for-solving-complex-tasks/' \
-  'https://docs.github.com/en/issues/tracking-your-work-with-issues/using-issues/adding-sub-issues'; do
+  'https://aclanthology.org/2023.acl-long.792/'; do
   require_literal "$ROOT/docs/sources.md" "$source" 'source ledger coverage missing'
 done
 
@@ -408,48 +339,18 @@ for file in "$ROOT"/skills/*/SKILL.md; do
     exit 1
   fi
 
-  case " $artifact_creators " in
-    *" $name "*)
-      for heading in '## Artifact' '## Close'; do
-        require_literal "$file" "$heading" "incomplete artifact contract in $name"
-      done
-      require_literal "$file" '~/.agents/artifacts/<workspace>/' "neutral root missing in $name"
-      for word in absolute repository vendor temporary collision; do
-        require_regex "$file" "$word" "incomplete artifact placement in $name"
-      done
-      require_regex "$file" '(unwritable|blocked writes?)' "blocked-write handling missing in $name"
-      require_regex "$file" 'return only' "artifact handoff contract missing in $name"
-      require_regex "$file" 'clickable Markdown links' "artifact handoff contract missing in $name"
-      require_regex "$file" 'fully[[:space:]]+expanded absolute destinations' \
-        "artifact handoff contract missing in $name"
-      require_regex "$file" 'local source references?.{0,40}relative to the artifact' \
-        "relative source-path contract missing in $name"
-      require_regex "$file" 'absolute paths?.{0,40}(runtime )?handoff' \
-        "absolute handoff-path contract missing in $name"
-      find "$folder" -type f -name '*.md' | while IFS= read -r payload; do
-        reject_absolute_source_examples "$payload"
-      done || {
-        echo "absolute local source example in $name" >&2
-        exit 1
-      }
-      for word in Delete Leave Promote sidecar 'fully actioned' 'downstream step' 'human disposition'; do
-        require_regex "$file" "$word" "lifecycle disposition missing in $name"
-      done
-      ;;
-  esac
-
-  case " $universal_methods " in
-    *" $name "*)
-      if grep -Eq '^## (Artifact|Close)$' "$file"; then
-        echo "artifact contract leaked into universal method: $name" >&2
-        exit 1
-      fi
-      if grep -Eq '~/.agents/artifacts/<workspace>/|type:[[:space:]]+(spec|task|review|inventory|change-plan|audit|research|campaign|panel)' "$file"; then
-        echo "artifact authorship leaked into universal method: $name" >&2
-        exit 1
-      fi
-      ;;
-  esac
+  if grep -Eq '^## (Artifact|Close)$' "$file"; then
+    echo "artifact contract leaked into a method: $name" >&2
+    exit 1
+  fi
+  if grep -Eq '~/.agents/artifacts/<workspace>/|type:[[:space:]]+(spec|task|inventory|change-plan|audit|research|campaign|panel)' "$file"; then
+    echo "artifact authorship leaked into a method: $name" >&2
+    exit 1
+  fi
+  test -z "$(declaration_values "$folder" type)" || {
+    echo "method owns an artifact type: $name" >&2
+    exit 1
+  }
 done
 
 for method in bulletproof dissect revolver triple-check; do
@@ -457,102 +358,8 @@ for method in bulletproof dissect revolver triple-check; do
     "decisive evidence economy missing in $method"
 done
 
-campaign="$ROOT/skills/sus-campaign/SKILL.md"
-for phrase in 'status, changed paths' 'No progress diary or recap'; do
-  require_literal "$campaign" "$phrase" \
-    'campaign worker result contract drift'
-done
-
-for literal in \
-  'Map only operations the campaign will use:' \
-  '**Advisory:**' \
-  '**Deterministic local:**' \
-  '**Isolated authority:**' \
-  'claim that a worker cannot bypass a boundary requires isolation.' \
-  'Missing authority blocks only the dependent operation.' \
-  'trusted owner may bootstrap a missing control' \
-  'Hosted status checks are optional;'; do
-  require_literal "$campaign" "$literal" 'campaign authority preflight drift'
-done
-
-for literal in \
-  'Every pickup must run the same loop:' \
-  'Put no task-list checkbox' \
-  'project-native ledger' \
-  'Instructions advise. Project commands reject. Isolation removes authority.' \
-  'Humans own' \
-  'They may delegate execution'; do
-  require_literal "$campaign" "$literal" 'campaign control-strength contract drift'
-done
-
-for literal in \
-  'Hosted status checks are optional;' \
-  'Suspec supplies no reviewer or stance count.' \
-  'cannot accept its own work.' \
-  'The owner may delegate merge execution' \
-  'cannot bypass the authority.'; do
-  require_literal "$campaign" "$literal" 'campaign review authority drift'
-done
-for literal in \
-  'Choose implementation models from task complexity and ambiguity.' \
-  'Choose reviewers from the criticality of their stance.'; do
-  require_literal "$campaign" "$literal" 'campaign model routing drift'
-done
-require_regex "$campaign" 'economy tier only.{0,50}bounded mechanical work.{0,50}decisive oracle' \
-  'campaign implementation model routing drift'
-require_regex "$campaign" 'economy tier.{0,30}narrow low-risk checks' \
-  'campaign review model routing drift'
-if grep -Eq '500 reviewable|15 handwritten|above five|current receipt|only an authorized human accepts' \
-  "$campaign"; then
-  echo 'obsolete campaign control plane survived' >&2
-  exit 1
-fi
-
-writer_types='sus-spec:spec:SPEC- sus-task:task:TASK- sus-inventory:inventory:INV- sus-change-plan:change-plan:CHANGE- sus-audit:audit:AUDIT- sus-research:research:RESEARCH- sus-campaign:campaign:CAMPAIGN- sus-panel:panel:PANEL-'
-for pair in $writer_types; do
-  writer=${pair%%:*}
-  declaration=${pair#*:}
-  expected_type=${declaration%%:*}
-  expected_prefix=${declaration#*:}
-  actual_types=$(declaration_values "$ROOT/skills/$writer" type)
-  test "$actual_types" = "$expected_type" || {
-    echo "artifact type ownership drift in $writer: $actual_types" >&2
-    exit 1
-  }
-  frontmatter_source="$ROOT/skills/$writer/SKILL.md"
-  validate_artifact_frontmatter "$frontmatter_source" "$expected_type" "$expected_prefix" || {
-    echo "artifact frontmatter contract drift in $writer" >&2
-    exit 1
-  }
-done
-
-for method in $universal_methods; do
-  test -z "$(declaration_values "$ROOT/skills/$method" type)" || {
-    echo "universal method owns an artifact type: $method" >&2
-    exit 1
-  }
-done
-
 demolition="$ROOT/skills/demolition/SKILL.md"
 require_literal "$demolition" 'Advocacy exercise, not evidence.' 'Demolition quarantine banner missing'
-
-spec="$ROOT/skills/sus-spec/SKILL.md"
-for literal in 'type: spec' 'status: draft' '## Intent' '## Requirements' 'Verify with:'; do
-  require_literal "$spec" "$literal" 'Spec authoring contract drift'
-done
-
-task="$ROOT/skills/sus-task/SKILL.md"
-for literal in 'type: task' 'status: ready' 'source:' 'scope:' '## Source' '## Scope' \
-  '## Do not change' '## Affected areas' '## Verify' '## Agent instructions' '## Findings' \
-  '## Run order' 'Starts after:' 'May run with:' '## Run summary'; do
-  require_literal "$task" "$literal" 'Task authoring contract drift'
-done
-
-change_plan="$ROOT/skills/sus-change-plan/SKILL.md"
-for literal in 'type: change-plan' 'preserves:' 'Baseline' 'Target' 'Preservation guarantees' \
-  'Transformation waves' 'Cutover / rollback' 'Task split'; do
-  require_literal "$change_plan" "$literal" 'Change-plan authoring contract drift'
-done
 
 stale='concise-output|revolver-review|codebase-exploration|promote-artifact|save-findings|empirical-proof|implement-task|market-research|planning-spec|write-spec|spec-check|split-work|review-output|security-review|fix-flaky-test|git-pr|write-audit|write-bug-report|write-change-plan|write-documentation|write-feature|write-fix|write-inventory|write-migration|write-performance|write-prd|write-refactor|write-research|write-rewrite|write-rfc|write-testing'
 if grep -RniE "(^|[^[:alnum:]-])($stale)([^[:alnum:]-]|$)" "$ROOT/README.md" "$ROOT/AGENTS.md" "$ROOT/.github" "$ROOT/docs" "$ROOT/skills"; then

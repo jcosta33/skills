@@ -19,23 +19,17 @@ authority, waivers, irreversible actions, and acceptance.
 
 No fresh proof, no completion claim. Map executable checks to command, working directory, state
 identifier, exit status, and decisive raw output. Map source evidence to identity, version or date,
-locator, and the smallest untouched decisive excerpt. Full output stays in the native tool record or
-an artifact-owned anchored receipt. Never paraphrase proof or reuse it after relevant edits.
+locator, and the smallest untouched decisive excerpt. Full output stays in the native tool record.
+Never paraphrase proof or reuse it after relevant edits.
 
 A critical gate with no observable trace is an assertion. Demand decisive output only when omission
 could masquerade as completion.
 
 ## Handoff
 
-When an artifact is the deliverable, return only clickable Markdown links without reciting it. Use
-compact `~/.agents/...` labels and fully expanded absolute destinations. Explain only blockers,
-failed creation, incomplete verification, or irreversible confirmation.
+Chat is the deliverable. Render it. Never fence the whole report. Add a brief summary only when it
+improves orientation without repetition. Explain only blockers, failed verification, or irreversible
+confirmation.
 
-When chat is the deliverable, render it. Never fence the whole report. Add a brief summary only when
-it improves orientation without repetition.
-
-## Close
-
-After the final consumer finishes and no downstream step needs a non-empty transient artifact set,
-require one human choice: Delete, Leave, or Promote. Include sidecars; exclude durable and
-repository-native inputs. Delete means verify every selected path is absent.
+When a skill relocates material a project already owns, return clickable Markdown links without
+reciting the content, using compact labels and fully expanded absolute destinations.

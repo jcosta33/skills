@@ -7,10 +7,9 @@ Installed alone means working alone.
   hidden convention.
 - Use roles, task language, and absolute runtime paths.
 - Ship no appendix payloads.
-- Keep placement and lifecycle rules inside artifact authors.
 
 Isolation proof installs one `SKILL.md` into an empty catalog and validates its metadata and
-standalone procedure without other Suspec content.
+standalone procedure without other catalog content.
 
 ## Semantic composition
 

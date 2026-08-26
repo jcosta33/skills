@@ -1,5 +1,6 @@
 #!/bin/sh
 set -eu
+export LC_ALL=C
 
 ROOT=${1:-$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)}
 TMP=$(mktemp -d)
@@ -42,15 +43,15 @@ expect_failure() {
     artifact-leak)
       printf '\n## Artifact\n\nForbidden.\n' >> "$fixture/skills/bulletproof/SKILL.md"
       ;;
-    missing-frontmatter)
-      rewrite_without 'type: spec' "$fixture/skills/sus-spec/SKILL.md"
+    artifact-type-leak)
+      printf '\n```yaml\ntype: spec\n```\n' >> "$fixture/skills/bulletproof/SKILL.md"
       ;;
     invalid-description-yaml)
       awk '
         /^description:/ { print "description: Invalid: YAML"; next }
         { print }
-      ' "$fixture/skills/fork-me/SKILL.md" > "$fixture/skills/fork-me/SKILL.md.tmp"
-      mv "$fixture/skills/fork-me/SKILL.md.tmp" "$fixture/skills/fork-me/SKILL.md"
+      ' "$fixture/skills/ask-user/SKILL.md" > "$fixture/skills/ask-user/SKILL.md.tmp"
+      mv "$fixture/skills/ask-user/SKILL.md.tmp" "$fixture/skills/ask-user/SKILL.md"
       ;;
     fenced-chat)
       awk '
@@ -71,86 +72,10 @@ expect_failure() {
     quarantine-drift)
       rewrite_without '`Advocacy exercise, not evidence.`' "$fixture/skills/demolition/SKILL.md"
       ;;
-    handoff-drift)
-      sed 's/clickable Markdown links/clickable paths/' "$fixture/skills/sus-spec/SKILL.md" \
-        > "$fixture/skills/sus-spec/SKILL.md.tmp"
-      mv "$fixture/skills/sus-spec/SKILL.md.tmp" "$fixture/skills/sus-spec/SKILL.md"
-      ;;
     evidence-economy-drift)
       sed 's/smallest untouched decisive output excerpt/untouched decisive output/' \
         "$fixture/skills/revolver/SKILL.md" > "$fixture/skills/revolver/SKILL.md.tmp"
       mv "$fixture/skills/revolver/SKILL.md.tmp" "$fixture/skills/revolver/SKILL.md"
-      ;;
-    source-reference-drift)
-      rewrite_without \
-        'Write local source references relative to the artifact. Use absolute paths only for runtime handoff.' \
-        "$fixture/skills/sus-audit/SKILL.md"
-      ;;
-    source-reference-example-drift)
-      sed 's|../../path/to/source.md|/absolute/path/to/source.md|' \
-        "$fixture/skills/sus-spec/SKILL.md" > "$fixture/skills/sus-spec/SKILL.md.tmp"
-      mv "$fixture/skills/sus-spec/SKILL.md.tmp" "$fixture/skills/sus-spec/SKILL.md"
-      ;;
-    source-reference-quoted-drift)
-      sed 's|../../path/to/source.md|"/absolute/path/to/source.md"|' \
-        "$fixture/skills/sus-spec/SKILL.md" > "$fixture/skills/sus-spec/SKILL.md.tmp"
-      mv "$fixture/skills/sus-spec/SKILL.md.tmp" "$fixture/skills/sus-spec/SKILL.md"
-      ;;
-    source-reference-inline-drift)
-      printf '\n```yaml\nsources: ["/absolute/path/to/source.md"]\n```\n' \
-        >> "$fixture/skills/sus-spec/SKILL.md"
-      ;;
-    campaign-local-proof-drift)
-      sed '/Hosted status checks are optional;/d' \
-        "$fixture/skills/sus-campaign/SKILL.md" \
-        > "$fixture/skills/sus-campaign/SKILL.md.tmp"
-      mv "$fixture/skills/sus-campaign/SKILL.md.tmp" \
-        "$fixture/skills/sus-campaign/SKILL.md"
-      ;;
-    campaign-authority-drift)
-      sed '/cannot accept its own work\./d' \
-        "$fixture/skills/sus-campaign/SKILL.md" \
-        > "$fixture/skills/sus-campaign/SKILL.md.tmp"
-      mv "$fixture/skills/sus-campaign/SKILL.md.tmp" \
-        "$fixture/skills/sus-campaign/SKILL.md"
-      ;;
-    campaign-operation-scope-drift)
-      sed 's/Map only operations the campaign will use:/Map every possible operation:/' \
-        "$fixture/skills/sus-campaign/SKILL.md" \
-        > "$fixture/skills/sus-campaign/SKILL.md.tmp"
-      mv "$fixture/skills/sus-campaign/SKILL.md.tmp" \
-        "$fixture/skills/sus-campaign/SKILL.md"
-      ;;
-    campaign-capability-class-drift)
-      sed 's/\*\*Deterministic local:\*\*/\*\*Advisory:\*\*/' \
-        "$fixture/skills/sus-campaign/SKILL.md" \
-        > "$fixture/skills/sus-campaign/SKILL.md.tmp"
-      mv "$fixture/skills/sus-campaign/SKILL.md.tmp" \
-        "$fixture/skills/sus-campaign/SKILL.md"
-      ;;
-    campaign-bootstrap-drift)
-      sed '/trusted owner may bootstrap a missing control/d' \
-        "$fixture/skills/sus-campaign/SKILL.md" \
-        > "$fixture/skills/sus-campaign/SKILL.md.tmp"
-      mv "$fixture/skills/sus-campaign/SKILL.md.tmp" \
-        "$fixture/skills/sus-campaign/SKILL.md"
-      ;;
-    campaign-human-merge-drift)
-      sed 's/The owner may delegate merge execution/The owner may not delegate merge execution/' \
-        "$fixture/skills/sus-campaign/SKILL.md" \
-        > "$fixture/skills/sus-campaign/SKILL.md.tmp"
-      mv "$fixture/skills/sus-campaign/SKILL.md.tmp" \
-        "$fixture/skills/sus-campaign/SKILL.md"
-      ;;
-    campaign-human-ownership-drift)
-      sed 's/Humans own/Humans review/' "$fixture/skills/sus-campaign/SKILL.md" \
-        > "$fixture/skills/sus-campaign/SKILL.md.tmp"
-      mv "$fixture/skills/sus-campaign/SKILL.md.tmp" "$fixture/skills/sus-campaign/SKILL.md"
-      ;;
-    campaign-model-routing-drift)
-      sed 's/Choose reviewers from the criticality of their stance\./Choose reviewers by availability./' \
-        "$fixture/skills/sus-campaign/SKILL.md" > "$fixture/skills/sus-campaign/SKILL.md.tmp"
-      mv "$fixture/skills/sus-campaign/SKILL.md.tmp" "$fixture/skills/sus-campaign/SKILL.md"
       ;;
     *)
       echo "unknown mutation: $mutation" >&2
@@ -166,13 +91,9 @@ expect_failure() {
 
 sh "$ROOT/scripts/lint-current.sh" "$ROOT" >/dev/null
 
-for mutation in missing-skill non-markdown-payload appendix-payload escaping-link artifact-leak missing-frontmatter \
-  invalid-description-yaml fenced-chat stale-name broken-link symlink quarantine-drift handoff-drift \
-  evidence-economy-drift source-reference-drift source-reference-example-drift \
-  source-reference-quoted-drift source-reference-inline-drift \
-  campaign-local-proof-drift campaign-authority-drift campaign-operation-scope-drift \
-  campaign-capability-class-drift campaign-bootstrap-drift \
-  campaign-human-merge-drift campaign-human-ownership-drift campaign-model-routing-drift; do
+for mutation in missing-skill non-markdown-payload appendix-payload escaping-link artifact-leak \
+  artifact-type-leak invalid-description-yaml fenced-chat stale-name broken-link symlink \
+  quarantine-drift evidence-economy-drift; do
   expect_failure "$mutation"
 done
 

@@ -2,16 +2,13 @@
 
 This repository owns:
 
-- universal verification, attack, dissection, compression, ambiguity, technical resolution,
-  promotion, and memory methods;
-- authors for Suspec artifact types;
-- references required by one skill;
+- universal verification, attack, dissection, sequencing, compression, ambiguity, deliberation,
+  technical resolution, promotion, and memory methods;
 - catalog design evidence from witnessed failures.
 
 It does not own downstream implementation, debugging, testing, security, Git hosting, product
 documentation, custom agents, orchestration runtimes, project policy, runtime checks, MCP, storage,
 registries, cleanup, hooks, model services, or network clients.
 
-The catalog authors restartable campaign contracts and defines their capability requirements.
-Projects enforce delivery transitions and own executable regressions. Native harnesses isolate
-authority.
+It authors no document. Skills that write a typed artifact belong to the method that defines that
+artifact, not here.

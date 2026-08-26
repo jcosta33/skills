@@ -1,69 +1,61 @@
 # Changelog
 
-All notable changes to the Suspec skills catalog are recorded here. The format follows
+All notable changes to this skills catalog are recorded here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and the catalog is versioned with
 [semantic versioning](https://semver.org/spec/v2.0.0.html): a **major** bump removes or
 renames a skill or breaks a skill's contract, **minor** adds a skill or non-breaking guidance,
 **patch** is a fix or wording change.
 
 The catalog is pull-updatable — install it for your runner (for example,
-`npx skills add jcosta33/suspec-skills -g -a codex`), pin to a tag or commit for stability,
+`npx skills add jcosta33/skills -g -a codex`), pin to a tag or commit for stability,
 and re-run to re-fetch. Re-running `add` does not prune removed names. Watch the
-[releases](https://github.com/jcosta33/suspec-skills/releases) and re-pull when a bump matters.
+[releases](https://github.com/jcosta33/skills/releases) and re-pull when a bump matters.
+
+Released sections below predate the split and still name `jcosta33/suspec-skills`, `disrespec`,
+`fork-me`, and the `sus-*` authors. They are historical and stay byte-for-byte.
 
 ## [Unreleased]
 
+## [6.0.0] - 2026-08-26
+
+### Removed
+
+- The `sus-*` artifact authors left this catalog. They ship with the method that defines them, in
+  [Suspec](https://github.com/jcosta33/suspec). Install them with
+  `npx skills add jcosta33/suspec`. Nothing here writes a document any more.
+
 ### Changed
 
-- `evals/README.md` states that eval transcripts are local-only; the catalog keep-or-drop
-  test remains `docs/skill-existence-test.md`.
-
-- The catalog surface adds `settle` for evidence-driven technical decisions and `sus-panel` for
-  durable independent deliberation. Panel participants run the blind first pass concurrently; the
-  user sets the count or the orchestrator chooses the smallest sufficient panel. Each skill installs
-  alone; no aliases ship.
-- `sus-campaign` runs large goals through reusable worktree lanes, independently reviewable pull
-  requests, bounded sequential review, scoped comments, and merged-SHA verification. Numeric size
-  and stance limits are circuit breakers, not quality claims.
-- `sus-spec` emits one enriched Markdown requirement block: `When`, `Then`, and `Verify with`.
-  `sus-task` requires a governing spec and records CI proof as `CI: https://...`.
-- Ordinary Suspec artifacts use `~/.agents/artifacts/<workspace>/` so local agents share one
-  transient file without repository changes, copies, or symlinks. Handoff links keep absolute
-  destinations.
-- Artifact authors now return only clickable artifact links after successful creation. Universal
-  methods keep evidence to the smallest untouched decisive excerpt; campaign workers return state,
-  proof, and blockers without a progress diary.
+- The repository is `jcosta33/skills`. Update install commands and pins; GitHub redirects the old
+  name, but a pinned URL should be rewritten.
+- `disrespec` is now `debloat` and `fork-me` is now `ask-user`. The procedures are unchanged.
+- `sus-panel` is now `panel`, a universal method. It writes no artifact, holds no `type: panel`
+  frontmatter, and returns its recommendation, comparison, dissent, and unknowns in chat.
+- Every skill returns through chat, native memory, target edits, or durable relocation. Universal
+  methods keep evidence to the smallest untouched decisive excerpt.
 - `promote` remains durable-only; it does not relocate files between transient roots.
-- Only `sus-*` artifact authors create artifacts. Universal methods return through chat, native
-  memory, target edits, or durable relocation.
-- Descriptions select by meaning: action, target, trigger, and nearest exclusions where needed. They
-  never self-name or carry procedure. No sentence count, stock order, or universal body shape
-  survives. Plain scalars that YAML would split at an unquoted colon are rejected.
-- Static gates enforce static contracts. Skill behavior changes only after a witnessed Suspec
-  failure or bounded external finding; synthetic prompt matrices are gone.
-- Conditional procedures load from direct one-level bundled references. Every installed skill still
-  works alone.
-- `fork-me` owns every agent-originated question after facts and conventions are exhausted: three
+- `ask-user` owns every agent-originated question after facts and conventions are exhausted: three
   options by default, two for a genuine binary, recommendation first, native picker or numbered text
   fallback, and dependent work blocked until selection.
-- `sus-spec` resolves consequential design approaches before requirements. Clear reversible work
-  stays direct.
-- `sus-campaign` detects native worktrees, requires main-branch authority, records lane provenance,
-  preserves foreign lanes, and carries an executable acceptance oracle through implementation and
-  scoped re-review.
 - `revolver` derives the complete target-justified stance pool and resolves it sequentially without
   a numeric floor. `triple-check` runs three blind top-tier reviewers concurrently against one frozen
   snapshot, then reconciles and repairs once.
-- Skills keep only execution-changing invariants, dangerous edges, contracts, stops, conditional
-  procedures, and demonstrated failure guards.
+- Descriptions select by meaning: action, target, trigger, and nearest exclusions where needed. They
+  never self-name or carry procedure. No sentence count, stock order, or universal body shape
+  survives. Plain scalars that YAML would split at an unquoted colon are rejected.
+- Skills keep only execution-changing invariants, dangerous edges, contracts, stops, and demonstrated
+  failure guards.
 - Structured chat renders as Markdown. Reports, tables, and prose handoffs never sit inside fences;
-  fences remain for literal code, untouched raw evidence, and artifact templates.
-- Artifact skills stay checker-agnostic. Ambient MCP discovery or explicit user invocation reaches
-  the optional deterministic checker without bloating method bodies.
-- Written specs use the `0.26.0` contract. C028 enforces the three-item block; C004 requires
-  exactly one strength word in `Then`.
-- Catalog design docs are now a gated contract, and externally grounded method changes must update
-  the bounded source ledger in the same change.
+  fences remain for literal code and untouched raw evidence.
+- Static gates enforce static contracts. Skill behavior changes only after a witnessed failure in
+  real work or a bounded external finding; synthetic prompt matrices are gone.
+- Catalog design docs are a gated contract, and externally grounded method changes must update the
+  bounded source ledger in the same change. `evals/README.md` states that eval transcripts are
+  local-only; the keep-or-drop test remains `docs/skill-existence-test.md`.
+- The gates are locale-pinned, so the manifest check no longer depends on the caller's `LC_*`.
+- Cutover: `npx skills add` does not prune. Remove the departed and renamed entries explicitly with
+  `npx skills remove -g -a <agent> disrespec fork-me sus-audit sus-campaign sus-change-plan
+  sus-inventory sus-panel sus-research sus-spec sus-task`, then re-add.
 - Released sections remain byte-for-byte historical; current corrections stay under Unreleased.
 
 ## [5.0.0] - 2026-08-19

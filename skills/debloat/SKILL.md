@@ -1,9 +1,9 @@
 ---
-name: disrespec
+name: debloat
 description: Compress and harden supplied prose. Use when repetition, softness, ceremony, or structural bloat obstructs developer use. Do not use for source code, commit messages, or repository-native pull-request forms.
 ---
 
-# Disrespec
+# Debloat
 
 Cut waste. Kill softness. Make every token command respect.
 

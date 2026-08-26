@@ -1,10 +1,11 @@
 #!/bin/sh
 set -eu
+export LC_ALL=C
 
 ROOT=$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)
 file="$ROOT/CHANGELOG.md"
-expected=f2fceb8ddfe8627a0785041e20460dc2c5e078ea27383102fed9007594b48f7e
-base=${SUSPEC_SKILLS_HISTORY_BASE:-}
+expected=690ec5fedcceae99326ab31c076099e8415c38d821639e7a815ae8f9032d42e6
+base=${SKILLS_HISTORY_BASE:-${SUSPEC_SKILLS_HISTORY_BASE:-}}
 
 case "$base" in
   ''|0000000000000000000000000000000000000000) ;;
