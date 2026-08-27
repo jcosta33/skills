@@ -12,11 +12,14 @@ Lock the next seam. Write only that seam.
 Work one level at a time. A higher lock that moves drops the in-flight slice.
 
 1. **Language.** Name the thing in the project's words. Stop until the name is shared.
-2. **Obligation.** Name the product, architectural, and operational guarantees for this slice:
-   preservation, verify-with, and rollback. Do not open a staged transformation artifact.
+2. **Obligation.** Name what the slice guarantees: the behavior a caller can now rely on, and what
+   must stay true that already was. Then verify-with and rollback for each. Machinery is not
+   implied by the guarantee. Do not open a staged transformation artifact.
 3. **Place.** Name the files, symbols, and runtime boundary. When coupling is unproven, trace the
    path to closure first.
-4. **Slice.** Name the smallest write that keeps the obligation. Then write it.
+4. **Slice.** Name the smallest write that keeps the obligation. Reuse first: search for the
+   existing rule and call it. Duplicate only with a named reason, and proximity is not a reason.
+   Do not extract a wrapper that restates an existing operation. Then write it.
 
 Prove discoverable technical questions from evidence. Structure remaining human-owned locks as
 explicit choices. Do not ask a lower question while a higher lock is open.
