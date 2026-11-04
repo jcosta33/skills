@@ -18,6 +18,7 @@ for case in \
   'nested-file:nested payload' \
   'symlink:holds something other than SKILL.md' \
   'yaml-colon:invalid frontmatter' \
+  'bad-invocation:invalid frontmatter' \
   'self-name:names its own skill' \
   'sibling-name:names sibling skill' \
   'broken-link:broken link'; do
@@ -35,6 +36,8 @@ for case in \
     nested-file) mkdir "$fixture/skills/$skill/references" && printf 'x\n' > "$fixture/skills/$skill/references/x.md" ;;
     symlink) ln -s SKILL.md "$fixture/skills/$skill/alias.md" ;;
     yaml-colon) sed 's/^description: .*/description: Broken: YAML/' "$file" > "$file.tmp" && mv "$file.tmp" "$file" ;;
+    bad-invocation) sed 's/^name: .*/&\
+disable-model-invocation: yes/' "$file" > "$file.tmp" && mv "$file.tmp" "$file" ;;
     self-name) sed "s/^description: .*/description: Use $skill now./" "$file" > "$file.tmp" && mv "$file.tmp" "$file" ;;
     sibling-name) printf '\nThen run %s.\n' "$other" >> "$file" ;;
     broken-link) printf '\n[gone](./missing.md)\n' >> "$fixture/README.md" ;;
@@ -53,4 +56,4 @@ for case in \
   esac
 done
 
-echo "test-lint: OK (8 mutations killed)"
+echo "test-lint: OK (9 mutations killed)"

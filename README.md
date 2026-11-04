@@ -1,6 +1,6 @@
 # skills
 
-Seven portable Markdown skills for coding agents. Each folder under [`skills/`](./skills/) is one
+Portable Markdown skills for coding agents. Each folder under [`skills/`](./skills/) is one
 `SKILL.md` that works installed alone: no runtime, scripts, or hidden dependencies.
 
 ## Install
@@ -26,6 +26,16 @@ entry go too.
 | [`panel`](./skills/panel/SKILL.md)             | recommend one option from blind analyses             | one correlated pass dressed up as several perspectives            |
 | [`revolver`](./skills/revolver/SKILL.md)       | rotate fresh reviewers one stance at a time, fixing  | authors reviewing their own work; findings left unresolved        |
 | [`settle`](./skills/settle/SKILL.md)           | resolve ambiguity by evidence; ask only as a choice  | bare questions, guessed preferences, decisions dumped on the user |
+
+### Micro
+
+| Skill                                          | Use                                                  | Failure it prevents                                               |
+| ---------------------------------------------- | ---------------------------------------------------- | ----------------------------------------------------------------- |
+| [`tldr`](./skills/tldr/SKILL.md)               | decision-only short version, on request (`/tldr`)    | a summary that buries the decision under process                  |
+
+`tldr` sets `disable-model-invocation: true`, a Claude Code field outside the Agent Skills spec.
+Codex uses its own `agents/openai.yaml` instead, so outside Claude Code it can also trigger on its
+description.
 
 None of these writes a document of its own; each answers in chat or edits its target. Skills that
 write Corpus artifacts ship with [Corpus](https://github.com/jcosta33/corpus). Sources behind the

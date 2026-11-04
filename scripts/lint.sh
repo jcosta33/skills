@@ -26,7 +26,8 @@ for name in $skills; do
   file="$ROOT/skills/$name/SKILL.md"
   [ -f "$file" ] || fail "missing $file"
 
-  # Frontmatter: exactly name (= folder) and a one-line, YAML-safe description.
+  # Frontmatter: exactly name (= folder) and a one-line, YAML-safe description; optionally
+  # disable-model-invocation (Claude Code; other harnesses ignore it).
   awk -v expected="$name" '
     NR == 1 { if ($0 != "---") exit 1; inside = 1; next }
     inside && $0 == "---" { closed = 1; exit }
@@ -36,8 +37,9 @@ for name in $skills; do
       if (length(value) > 1024 || value !~ /^[[:alpha:]]/ || value ~ /:[[:space:]]/ || value ~ /[[:space:]]#/) exit 1
       next
     }
+    inside && /^disable-model-invocation: (true|false)$/ { invocations++; next }
     inside { exit 1 }
-    END { if (!closed || names != 1 || descriptions != 1) exit 1 }
+    END { if (!closed || names != 1 || descriptions != 1 || invocations > 1) exit 1 }
   ' "$file" || fail "invalid frontmatter: $name"
 
   description=$(sed -n 's/^description: //p' "$file" | head -n 1)
