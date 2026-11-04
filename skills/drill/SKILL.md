@@ -1,6 +1,6 @@
 ---
 name: drill
-description: Settle what a change is called, what it guarantees, where it lives, and its smallest write before writing code. Use when a change starts while its meaning, guarantee, or location is unsettled, or when implementation has begun without them. Do not use for a multi-stage migration that needs a staged plan with rollback.
+description: Decide what a change is called, what it guarantees, where it lives, and its smallest write before writing code. Use when a change starts while its meaning, guarantee, or location is unsettled, or when implementation has begun without them. Do not use for a multi-stage migration that needs a staged plan with rollback.
 ---
 
 # Drill

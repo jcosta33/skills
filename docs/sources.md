@@ -20,12 +20,12 @@ practitioner material by its setup. Remove an entry when its line leaves, and re
 - **Curse of Instructions.** Harada et al., ICLR 2025. Joint compliance falls as instruction count
   grows. https://openreview.net/forum?id=R6q67CDBCH
 - **Claude Code skill activation experiment, Ivan Seleznov.** One unpinned setup: directive
-  descriptions activated more often. Backs `ALWAYS` in `ask-user` only.
+  descriptions activated more often. Backs `ALWAYS` in `settle` only.
   https://github.com/SeleznovIvan/claude-skills-test
 - **Vercel skills CLI.** Global and per-agent install; `add` does not remove departed skills.
   https://github.com/vercel-labs/skills
 
-## ask-user
+## settle
 
 - **ConInstruct.** AAAI 2026. Strong models detect conflicts but rarely ask the user.
   https://ojs.aaai.org/index.php/AAAI/article/view/40356
@@ -62,6 +62,3 @@ practitioner material by its setup. Remove an entry when its line leaves, and re
   their own output; reviewers must be fresh. https://arxiv.org/abs/2410.21819
 - **Primers or reminders?** Spadini, Calikli, and Bacchelli, ICSE 2020. Visible prior comments steer
   later reviewers; hide peer prose. https://doi.org/10.1145/3377811.3380385
-- **How we built our multi-agent research system, Anthropic.** Parallel workers help breadth at a
-  steep token cost; fast mode stays the default.
-  https://www.anthropic.com/engineering/built-multi-agent-research-system

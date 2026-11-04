@@ -16,8 +16,6 @@ siblings is broken.
 - Use untitled inline Markdown links. Reference-style and angle-bracket links are rejected.
 - Update the README catalog row with every skill addition or removal, and
   [`docs/sources.md`](docs/sources.md) when a sourced line changes or leaves.
-- Released `CHANGELOG.md` sections are history; never edit them. Removing or renaming a skill is a
-  major version with a cutover note in the README and the changelog. Tag every release.
 
 ## Verify
 
