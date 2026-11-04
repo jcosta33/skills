@@ -1,0 +1,24 @@
+name: lint
+
+# Structural checks over this catalog. Every gate is local: this repository depends on no sibling.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Catalog lint
+        run: sh scripts/lint.sh
+
+      - name: Lint mutation test
+        run: sh scripts/test-lint.sh

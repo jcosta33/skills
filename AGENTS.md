@@ -5,24 +5,23 @@ siblings is broken.
 
 ## Edit contract
 
-- Keep each skill complete in `skills/<name>/SKILL.md`. Ship no appendix payloads.
-- Keep frontmatter `name` and directive `description`.
-- Preserve standalone operation and Markdown-only payloads.
-- Author no document. These skills return their result in chat; durable records belong to the
-  project or method that owns them.
-- Use untitled inline Markdown links with simple destinations. Reference-style, angle-wrapped,
-  fragmented, and nested-parenthesis destinations are rejected.
-- Update the README catalog row with every skill addition or removal.
-- Update `docs/sources.md` in the same change whenever an externally grounded skill or design rule
-  changes. Remove sources when their claims leave.
-- Preserve released `CHANGELOG.md` history.
-- Follow [catalog design](docs/README.md) for activation, body, execution, scope, self-containment,
-  and existence rules.
+- One `skills/<name>/SKILL.md` per skill and nothing else in the folder.
+- Frontmatter holds `name` (the folder name) and a one-line `description`: the action, the real
+  trigger in task language, and the nearest exclusion. Never name the skill itself or a sibling.
+- Keep only lines that change what a strong model does. Cut good practice it already follows,
+  slogans, and rationale.
+- Change a skill only for a witnessed failure. Record the failure and the with/without result in the
+  commit message.
+- Skills write no document of their own: they answer in chat or edit their target.
+- Use untitled inline Markdown links. Reference-style and angle-bracket links are rejected.
+- Update the README catalog row with every skill addition or removal, and
+  [`docs/sources.md`](docs/sources.md) when a sourced line changes or leaves.
+- Released `CHANGELOG.md` sections are history; never edit them. Removing or renaming a skill is a
+  major version with a cutover note in the README and the changelog. Tag every release.
 
 ## Verify
 
 ```bash
-sh scripts/lint-current.sh
-sh scripts/test-lint-current.sh
-sh scripts/lint-released-changelog.sh
+sh scripts/lint.sh
+sh scripts/test-lint.sh
 ```

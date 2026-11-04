@@ -1,18 +1,11 @@
 ---
 name: ask-user
-description: Intercept every agent-originated question and unresolved ambiguity that requires user input. ALWAYS use before asking for clarification, confirmation, permission, preference, approval, waiver, a decision, or any answer that work must wait for. Do not use when no user response is required; answer user-originated factual questions directly, ignore rhetorical questions, and settle discoverable or reversible matters yourself.
+description: Decide what evidence can decide, and turn what only the user can decide into a structured choice. ALWAYS use before asking the user anything, and when work would stop for a technical question, conflicting evidence, or an unmade choice. Do not use to answer the user's own factual questions.
 ---
 
 # Ask User
 
-If the next step needs a user response, stop.
-
-1. Exhaust discoverable facts and reversible conventions.
-2. State one blocked choice.
-3. Use the native picker: recommendation first, three genuine options by default, two when binary,
-   one plain reason and cost each, and `Other`.
-4. Without a picker, render the same numbered choices plus `Other`.
-5. Batch independent choices. Resolve dependent choices in order. Freeze dependent work.
-
-Never infer preference. Never ask bare prose. Never disguise a question as "let me know," "should
-I," or "would you like me to."
+Settle what code, tests, project precedent, or primary docs can decide, and state the decision. For
+what only the user can decide, ask as a choice: native picker, else a numbered list. Recommendation
+first, three options (two if binary), one reason and cost each, plus Other. Freeze only the work that
+depends on the answer.

@@ -12,9 +12,42 @@ and re-run to re-fetch. Re-running `add` does not prune removed names. Watch the
 [releases](https://github.com/jcosta33/skills/releases) and re-pull when a bump matters.
 
 Released sections below predate the split and still name `jcosta33/suspec-skills`, `disrespec`,
-`fork-me`, and the `sus-*` authors. They are historical and stay byte-for-byte.
+`fork-me`, and the `sus-*` authors. They are historical and stay byte-for-byte. Suspec is now
+[Corpus](https://github.com/jcosta33/corpus), and its authors are the `corpus-*` skills.
 
 ## [Unreleased]
+
+## [7.0.0] - 2026-11-05
+
+### Removed
+
+- `settle`, `dissect`, `remember`, `triple-check`, and `demolition` left the catalog. Remove them
+  explicitly: `npx skills add` does not prune. See the README cutover note.
+- `demolition` is cut without a successor. Ask for the strongest case against an idea in plain words.
+- `evals/`, the design docs under `docs/` other than the source ledger, the released-changelog gate,
+  and the old lint and its mutation test.
+
+### Changed
+
+- `settle` merged into `ask-user`: decide what evidence can decide, ask the rest as a structured
+  choice.
+- `dissect` merged into `bulletproof`: tracing a code path is one more claim to prove.
+- `triple-check` merged into `revolver`: three parallel fresh reviewers are the default; the
+  sequential stance rotation runs when exhaustive review is asked for.
+- `remember` merged into `promote`: lessons and working documents go to the project's existing home.
+- Every skill was cut to the lines that changed what a strong model did against a one-line
+  instruction on a real task. The per-skill results are in the release commit message.
+- `drill` asks for the behavior change a caller can rely on, not only what must stay true.
+- One lint, `scripts/lint.sh`, checks the manifest, single-file payloads, frontmatter, sibling names,
+  and links. `scripts/test-lint.sh` proves each check fails for its own reason. CI runs both.
+- The design rules live in `AGENTS.md`; sources stay in `docs/sources.md`.
+- The `sus-*` authors moved with the Suspec rename to [Corpus](https://github.com/jcosta33/corpus)
+  as `corpus-spec`, `corpus-audit`, `corpus-research`, and `corpus-campaign`.
+
+### Fixed
+
+- The 6.0.0 cutover command put skill names after `-a`, which the CLI reads as agent names. Put
+  names first, and leave `-a` off `remove` so the shared copy and lock entry go too.
 
 ## [6.0.0] - 2026-08-26
 
