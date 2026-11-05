@@ -1,0 +1,594 @@
+[
+  {
+    "id": "dissect-01",
+    "repo": "sd",
+    "at": null,
+    "paths": null,
+    "tools": [],
+    "request": "Which of the DENIED_COMMANDS in electron/commands.ts does the main process itself actually call on the native addon? Exact list with call sites. Also tell me which denied ones nothing calls at all.",
+    "key": {
+      "correct": "Main calls exactly five denied commands: begin_renderer_session (electron/main.ts:174 inside createAndActivateWindow and main.ts:468), grant_path (electron/appIpc.ts:139 inside grantPickedPaths), start_dictation (voiceDictation.ts:61), stop_dictation (voiceDictation.ts:75) and cancel_dictation (voiceDictation.ts:89, registered from main.ts:792). The addon methods are called in camelCase (beginRendererSession, grantPath, startDictation...), not by the snake_case command string. Every other entry of the denied list (commands.ts:223-250) has no JS caller in main, preload or renderer: close_all_plugin_guis, hide_all_plugin_guis, show_all_plugin_guis, send_plugin_midi, the Link commands, the collab_* advertising/browsing commands, detect_sample_pitch, get_asr_status, load_whisper_model, read_audio_file, write_audio_file, is_plugin_gui_supported.",
+      "flaws": "Grepping the snake_case strings only and concluding few or none are called (the calls use camelCase addon methods, via the addonMethodName snake-to-camel mapping); missing cancel_dictation or grant_path; counting renderer desktopInvoke sites (denied commands are never routed to the renderer); claiming close_all_plugin_guis is used at shutdown because the commands.ts comment says so; listing a denied command as called when only its napi wrapper exists in crates/sourdaw-native/src/addon/mod.rs.",
+      "evidence": "electron/commands.ts:223-250 (DENIED_COMMANDS); electron/main.ts:174, 468, 792; electron/appIpc.ts:129-141; electron voiceDictation.ts:61, 75, 89; electron createScopedNativeAddon.ts:8-19 (required host methods); no other JS reference to the remaining denied names in src/ or electron/."
+    },
+    "source": "Sourdaw Electron IPC command allowlist/denylist and main-process host calls at 95128133a2."
+  },
+  {
+    "id": "dissect-02",
+    "repo": "sd",
+    "at": null,
+    "paths": null,
+    "tools": [],
+    "request": "Quit the desktop app with three plugin editors open: what actually closes the editor windows? Trace it from before-quit down to the code that tears them down.",
+    "key": {
+      "correct": "electron/main.ts:637 runShutdown -> electron shutdown.ts runBeforeQuitCascade (about lines 166-181): refusePluginCommands, releasePowerSave, disposeScanSupervisor, then host.shutdown() at line 180 -> napi shutdown in crates/sourdaw-native/src/addon/mod.rs:292 (aborts the export registry, then singletons.shutdown) -> crates/sourdaw-native/src/lib.rs:74 shutdown::shutdown -> shutdown.rs:109/118 -> close_every_plugin_gui at shutdown.rs:139 (imported at shutdown.rs:39). The editors are closed by close_every_plugin_gui inside the native shutdown. close_all_plugin_guis (napi wrapper addon/mod.rs:1140, Rust fn plugin_gui.rs:880) is NOT on this path: its only caller is the napi wrapper, and no JS calls that wrapper.",
+      "flaws": "Naming close_all_plugin_guis as the closer, trusting the commands.ts comment that the exit cascade closes editors through one of the denied commands, or the plugin_gui.rs:54 comment; stopping at host.shutdown() without following the Rust side; claiming the renderer or the BrowserWindow close handlers close the editors at quit; omitting the steps that run before host.shutdown().",
+      "evidence": "electron/main.ts:637; electron shutdown.ts:166-181 (host.shutdown at 180); crates/sourdaw-native/src/addon/mod.rs:292, 1140; crates/sourdaw-native/src/lib.rs:74; crates/sourdaw-native/src/shutdown.rs:39, 109, 118, 139; plugin_gui.rs:54 (stale comment), 880; electron/commands.ts comment on the denied plugin-GUI commands."
+    },
+    "source": "Sourdaw quit cascade across Electron main and the napi addon at 95128133a2."
+  },
+  {
+    "id": "dissect-03",
+    "repo": "sd",
+    "at": null,
+    "paths": null,
+    "tools": [],
+    "request": "Who consumes plugin-tail-changed? Follow it from the plugin reporting a new tail length to whatever reacts to it in the app.",
+    "key": {
+      "correct": "Producer: clap_host.rs:353 mark_tail_dirty -> signal_pending_tail_change; plugin_parameter_events.rs run_tick (lines 332-334) take_pending_tail_change_signal -> publish_pending_tail_changes; tail_watcher.rs:90-108 emits PLUGIN_TAIL_CHANGED_EVENT (constant at tail_watcher.rs:34, emit at 106). Main forwards every addon event: electron/main.ts:743 onEvent -> forwardNativeEvent -> the generic events.ts forwarder -> EVENT_CHANNEL -> preload bridge.ts:200-215, which returns early at 205-207 when no listener is registered for the name. No renderer code calls desktopListen('plugin-tail-changed'); only the type PluginTailChange exists (src/modules/PluginHost/repositories/pluginBridge/types.ts:78-86). So nothing consumes it: the event dies in the preload bridge. The tail_samples returned at plugin load is not read either (loadPlugin.ts:21 only sets it to 0 in the web stub).",
+      "flaws": "Claiming a consumer exists (for example trusting the tail_watcher.rs:31-33 comment that the listener arrives with the packet that consumes the tail); treating the PluginTailChange type as a subscriber; stopping at main.ts without noting it reaches the renderer and is dropped in bridge.ts; missing the Rust producer chain.",
+      "evidence": "crates clap_host.rs:353; plugin_parameter_events.rs:332-334; tail_watcher.rs:31-34, 90-108; electron/main.ts:743; electron preload bridge.ts:200-215; src/modules/PluginHost/repositories/pluginBridge/types.ts:78-86; loadPlugin.ts:21; all desktopListen call sites are in the PluginHost, Crumbs, MIDI, AudioEngine and ControlSurface repositories and none names plugin-tail-changed."
+    },
+    "source": "Sourdaw native plugin tail reporting and Electron event forwarding at 95128133a2."
+  },
+  {
+    "id": "dissect-04",
+    "repo": "sd",
+    "at": null,
+    "paths": null,
+    "tools": [],
+    "request": "Who subscribes to track.added, track.removed and track.selectionChanged? Production code only.",
+    "key": {
+      "correct": "Nobody. They are emitted (track.added: addTrack.ts:41, useCases duplicateTrack.ts:153, publishTrackAdded.ts:10; track.removed: removeTrack.ts:137, publishTrackRemoved.ts:10; track.selectionChanged: selectTrack.ts:27; publish* called from handleAddTrack.ts:77,87, handlers/track/duplicateTrack.ts:74,84, handleRestoreTrack.ts:161,208, handleImportStemSet.ts:118,248, handleRemoveTrack.ts:110,136, discardCreatedTrack.ts:63,88, handleRemoveAllTracks.ts:121,143, restoreTrackAtIndexWithDeferredAddedEvent.ts:146, addTrackWithDeferredAddedEvent.ts:30) but no production code calls .on() for any of the three. The only onAny is in src/infra/events/testing/recordEvents.ts. GrandBoule and Toaster bus types declare track.added, but their subscribers only listen to audioDevice.loaded/audioDevice.removed (grandBouleSubscriber.ts:16; toasterSubscriber.ts:29, 96). All module buses are bound to the one global eventBus in src/app/bootstrap.ts:374-400, so there is no hidden second bus.",
+      "flaws": "Listing GrandBoule or Toaster as subscribers because their EventBus types include track.added; listing the testing recordEvents onAny; listing store subscriptions or React effects on track lists as event subscribers; trusting the appendTrack.ts:12 comment that implies the event drives orchestration.",
+      "evidence": "Emit sites listed above; grandBouleSubscriber.ts:16; toasterSubscriber.ts:29, 96; src/infra/events/testing/recordEvents.ts; src/app/bootstrap.ts:374-400; appendTrack.ts:12; no .on('track.added'|'track.removed'|'track.selectionChanged') outside __tests__."
+    },
+    "source": "Sourdaw app event bus and track use cases at 95128133a2."
+  },
+  {
+    "id": "dissect-05",
+    "repo": "sd",
+    "at": null,
+    "paths": null,
+    "tools": [],
+    "request": "useAppEventHandlers listens for project.save, project.new, command.undo, command.redo and midi.import. Who emits those? I want to know what Cmd+S and Cmd+Z really run.",
+    "key": {
+      "correct": "Nothing emits any of the five anywhere in src or electron; they are only declared (src/app/registerDependencies.ts:45-51, WorkspaceShell/useCases/workspaceEventBus.ts:19-23) and subscribed (WorkspaceShell/useCases/appEventSubscribers/onProjectSave.ts:8, onProjectNew.ts:8, onCommandUndo.ts:8, onCommandRedo.ts:8, onMidiImport.ts:9, wired by useAppEventHandlers.ts:29-57 and mounted from AppShell.tsx:397). The last emitter, emit('command.undo'), was removed in commit 00a15781f2. Cmd+S really runs either the shortcut project.saveProject (shortcutStore.ts:190-194, appAction saveProject -> WorkspaceShell/handlers/workspace/handleSaveProject.ts:4-7 -> saveProject) or, from the desktop menu, useNativeApplicationMenu.ts:141-156 case 'project:save' -> saveProject. Cmd+Z runs the shortcut callback 'undo' in handleKeydown.ts:369-371 (redo at 372-374) or the menu edit:undo -> undo(). The useAppEventHandlers subscribers are dead.",
+      "flaws": "Claiming the menu or shortcuts emit these events because the useAppEventHandlers doc says they are dispatched by menus; finding the subscribers and assuming an emitter exists; missing the shortcut appAction path or the native menu path; not establishing there is no dynamic-name emit.",
+      "evidence": "src/app/registerDependencies.ts:45-51; src/modules/WorkspaceShell/useCases/workspaceEventBus.ts:19-23; appEventSubscribers/on*.ts; useAppEventHandlers.ts:29-57; AppShell.tsx:397; shortcutStore.ts:190-194; handleSaveProject.ts:4-7; useNativeApplicationMenu.ts:141-156; handleKeydown.ts:369-374; git show 00a15781f2; no emit with a variable event name exists in src outside tests."
+    },
+    "source": "Sourdaw WorkspaceShell event subscribers, shortcut store and native menu at 95128133a2."
+  },
+  {
+    "id": "dissect-06",
+    "repo": "sd",
+    "at": null,
+    "paths": null,
+    "tools": [],
+    "request": "Setlist items have a programChange. When I jump to an item, does a program change actually reach a MIDI device? Trace it end to end.",
+    "key": {
+      "correct": "No. goToItem (src/modules/Setlist/useCases/setlist/goToItem.ts:42-48) emits 'midi.out' only when item.programChange is set, and no code subscribes to 'midi.out' (declared in setlistEventBus.ts:4 and workspaceEventBus.ts:24, bus bound at src/app/bootstrap.ts:390, no .on('midi.out') anywhere). Also programChange is always null: addSetlistItem.ts:20 creates it as null, updateSetlistItem is only called with {name} (SetlistPanel.tsx:113) and {autoStop} (SetlistPanel.tsx:394), setlistStore.ts:46-54 is an in-memory createStore with no storage, and no other module writes the store. goToItem is reached from SetlistPanel.tsx:302 and from nextItem/previousItem (SetlistPanel.tsx:202, 216 and handleNextSetlistItem.ts:7 / handlePreviousSetlistItem.ts:7). Both breaks must be named.",
+      "flaws": "Saying the program change is sent to MIDI outputs; naming only one of the two breaks (no subscriber, or never-set field); assuming some MIDI output module listens to midi.out because the event type exists in the workspace bus; assuming programChange is restored from saved projects.",
+      "evidence": "goToItem.ts:42-48; setlistEventBus.ts:4; workspaceEventBus.ts:24; src/app/bootstrap.ts:390; addSetlistItem.ts:20; SetlistPanel.tsx:113, 202, 216, 302, 394; setlistStore.ts:46-54; handleNextSetlistItem.ts:7; handlePreviousSetlistItem.ts:7."
+    },
+    "source": "Sourdaw Setlist module and event bus at 95128133a2."
+  },
+  {
+    "id": "dissect-07",
+    "repo": "sd",
+    "at": null,
+    "paths": null,
+    "tools": [],
+    "request": "On macOS, if I hit File > Save from the menu bar while the window is still loading the project, what happens to that click? Trace it.",
+    "key": {
+      "correct": "It is dropped. Path: electron applicationMenu.ts:265 -> main.ts:220-222 nativeMenuAction -> shellComposition.ts:83-96 sendMenuIntent -> dispatchMenuIntent -> menuDispatcher.dispatch (created at main.ts:183-188). In nativeMenuActionDispatcher.ts:48-56, while pending.window === window only intents passing canQueueForWindowlessRenderer are queued; for project:save that requires requestId, projectKey and revision (lines 17-25), which a plain menu click lacks, so the dispatcher returns without sending or queueing. pending is set by registerWindow (lines 42-47) from createAndActivateWindow (main.ts:179) and cleared by rendererReady (lines 70-82), driven from main.ts:868 when the renderer's useNativeApplicationMenu publishes rendererReady (true only once loading is not true; false when the project is null). Close-prompt saves from windowCloseCoordinator (main.ts:236-244) carry requestId and are queued, so they differ.",
+      "flaws": "Saying the click is queued and replayed when the renderer is ready; saying it is sent straight to the renderer; missing the canQueueForWindowlessRenderer condition; confusing the plain menu save with the close-prompt save path.",
+      "evidence": "electron applicationMenu.ts:265; electron/main.ts:179, 183-188, 220-222, 236-244, 868; electron shellComposition.ts:83-96; electron nativeMenuActionDispatcher.ts:17-25, 42-56, 70-82; src/modules/WorkspaceShell/presentations/hooks/useNativeApplicationMenu.ts rendererReady publication."
+    },
+    "source": "Sourdaw Electron native menu dispatch and renderer readiness at 95128133a2."
+  },
+  {
+    "id": "dissect-08",
+    "repo": "sd",
+    "at": null,
+    "paths": null,
+    "tools": [],
+    "request": "Is src/modules/Arrangement/useCases/trackViewActions dead? Production only.",
+    "key": {
+      "correct": "Yes, it is dead in production. Its decodeAudioFile.ts is imported only by Arrangement/useCases/__tests__/trackViewActions.spec.ts:5, and its getAudioDevices.ts is imported nowhere. The production callers of functions with the same names import AudioEngine's versions instead: getAudioDevices in InputSelector.tsx:5 and AudioDevicePicker.tsx:12; decodeAudioFile in TimelineEmptyMenu, useTimelineFileDrop, importAudioClipToTrack, importAudioFile, prepareStemImport, Sidebar, ArrangeView and WaveformEditor, all from AudioEngine. No barrel re-exports trackViewActions.",
+      "flaws": "Saying it is live because grep for decodeAudioFile or getAudioDevices finds many production callers (they are AudioEngine's same-named functions); missing that the only importer is a spec; missing getAudioDevices.ts having no importer at all.",
+      "evidence": "src/modules/Arrangement/useCases/trackViewActions/decodeAudioFile.ts and getAudioDevices.ts; Arrangement/useCases/__tests__/trackViewActions.spec.ts:5; InputSelector.tsx:5; AudioDevicePicker.tsx:12; import lines of the eight decodeAudioFile users point at AudioEngine; no index.ts re-export of trackViewActions."
+    },
+    "source": "Sourdaw Arrangement and AudioEngine use cases at 95128133a2."
+  },
+  {
+    "id": "dissect-09",
+    "repo": "sd",
+    "at": null,
+    "paths": null,
+    "tools": [],
+    "request": "On desktop, how does a dictation transcript get from the native speech engine into the AI chat prompt? Every hop with file:line.",
+    "key": {
+      "correct": "crates speech.rs:335-337 emit_result emits 'dictation-result' (error variant 341-344) -> addon event emitter -> electron/main.ts:743 onEvent -> nativeEventRouter.ts:13-31, which pulls dictation-result/dictation-error out of the generic forwarder and sends them on VOICE_DICTATION_TERMINAL_CHANNEL -> preload bridge.ts:225-243 validates the event name and session_id and looks up voiceTerminalListeners by session_id -> src/utils/desktopBridge.ts:157-163 desktopListenVoiceDictationTerminal -> AiRuntime/repositories/voiceNativeAdapter/onDictationResult.ts:17 -> AiRuntime useCases/voiceDictation/onDictationResult.ts:1-20 (imported under the alias onVoiceDictationResult, maps snake_case to camelCase) -> useVoiceRecording.ts:88-100 sets the text and calls injectVoicePromptDraft. The session is started by startDictation at useVoiceRecording.ts:120. It does NOT travel over EVENT_CHANNEL or desktopListen.",
+      "flaws": "Routing it through the generic events.ts forwarder, EVENT_CHANNEL and desktopListen; missing nativeEventRouter or the session_id keyed listener map; missing the alias import; ending at the store without reaching injectVoicePromptDraft.",
+      "evidence": "speech.rs:335-344; electron/main.ts:743; electron nativeEventRouter.ts:13-31; electron preload bridge.ts:225-243; src/utils/desktopBridge.ts:157-163; voiceNativeAdapter/onDictationResult.ts:17; useCases/voiceDictation/onDictationResult.ts:1-20; useVoiceRecording.ts:88-100, 120."
+    },
+    "source": "Sourdaw voice dictation path across Rust, Electron and React at 95128133a2."
+  },
+  {
+    "id": "dissect-10",
+    "repo": "sd",
+    "at": null,
+    "paths": null,
+    "tools": [],
+    "request": "Who calls the analyzeMix in AudioAnalysis/useCases/referenceMixComparison/analyzeMix? Production only, and give me the user action that reaches each one.",
+    "key": {
+      "correct": "That analyzeMix (referenceMixComparison/analyzeMix/analyzeMix.ts:19, synchronous, reads program audio) has exactly two production callers: (1) compareToReference.ts:3,24, reached from handleCompareToReference.ts:13, the 'compareToReference' app action registered in getAnalysisHandlers.ts:30 and offered in the palette at AiCommands.ts:190; (2) generateLessons.ts:9,15,25, which imports it through the barrel alias analyzeCurrentMix (useCases/index.ts:32) and re-binds it to a local const named analyzeMix; generateMentorLessons is reached from handleGetMentorTips.ts:8, the 'getMentorTips' action (getAiOrganizationHandlers.ts:15, palette AiCommands.ts:204). queries.ts getMentorTip also calls generateMentorLessons but is used only by its spec.",
+      "flaws": "Including handleAnalyzeMix.ts:15 or handleAutoFixMix.ts:53,112,154, which call the different async analyzeMix in useCases/analyzeMix.ts:57; counting 'analyzeMix' action strings; missing the generateLessons caller hidden behind the analyzeCurrentMix alias; counting getMentorTip as a production route.",
+      "evidence": "AudioAnalysis/useCases/referenceMixComparison/analyzeMix/analyzeMix.ts:19; AudioAnalysis/useCases/analyzeMix.ts:57; compareToReference.ts:3,24; handleCompareToReference.ts:13; getAnalysisHandlers.ts:30; AiCommands.ts:190, 204; AudioAnalysis useCases/index.ts:32; generateLessons.ts:9,15,25; handleGetMentorTips.ts:8; getAiOrganizationHandlers.ts:15; AiRuntime/useCases/musicMentor/queries.ts:8 used only by __tests__/queries.spec.ts:3."
+    },
+    "source": "Sourdaw AudioAnalysis and AiRuntime mentor code at 95128133a2."
+  },
+  {
+    "id": "dissect-11",
+    "repo": "sd",
+    "at": null,
+    "paths": null,
+    "tools": [],
+    "request": "What writes grinderHeight, and does the size survive a reload?",
+    "key": {
+      "correct": "The only writer is AppShell.tsx:500-502 makeDimSetter, which writes a computed key ({ [key]: fn(current) }) through updateWorkspaceState.ts:12; setGrinderHeight is made at AppShell.tsx:515 and passed as onResize (about AppShell.tsx:941). It does not survive a reload: workspaceStore.ts:16-18 is a createStore with no storage option, createStore.ts defaults to memory storage, and nothing else persists the panel dimensions (sidebarWidth and mixerHeight appear nowhere else either). After reload it is back to the default grinderHeight 380 (WorkspaceState.ts:99). The comment at AppShell.tsx:478 saying it is persisted via the workspace store is false.",
+      "flaws": "Saying it persists, trusting the AppShell.tsx:478 comment; missing the writer because the key is computed and grep for grinderHeight: finds no assignment; naming the default only from the resize handler rather than WorkspaceState.ts:99.",
+      "evidence": "AppShell.tsx:478, 500-502, 515, about 941; updateWorkspaceState.ts:12; workspaceStore.ts:16-18; src createStore.ts default memory storage; WorkspaceState.ts:99."
+    },
+    "source": "Sourdaw WorkspaceShell layout state at 95128133a2."
+  },
+  {
+    "id": "dissect-12",
+    "repo": "sd",
+    "at": null,
+    "paths": null,
+    "tools": [],
+    "request": "Which part of the app talks to server/collab-server.ts? Walk me from starting a collab session to the relay.",
+    "key": {
+      "correct": "None. server/collab-server.ts handles join, leave, action, cursor, sync-request, sync-response and state-update in handleMessage (about lines 711-762), but nothing in src, electron or crates opens a WebSocket to it; the only references are tests/e2e and scripts/checkReleaseInventory.ts. Product collaboration is peer to peer over WebRTC with manual SDP invites: createSession.ts:22 mints a sessionSecret, generateInvite.ts:52,100 embeds it in the invite, joinSession.ts:76 adopts it, and peerConnection.ts carries the data. Comments at sessionManagement.ts:151 and 650 about relay membership/room are stale.",
+      "flaws": "Describing a WebSocket client path from the app to the relay; trusting sessionManagement comments about a relay room; counting e2e tests or the release inventory script as the product client; missing the WebRTC invite path.",
+      "evidence": "server/collab-server.ts:711-762; no new WebSocket( in src/, electron/, crates/; tests/e2e and scripts/checkReleaseInventory.ts references; peerConnection.ts; generateInvite.ts:52, 100; createSession.ts:22; joinSession.ts:76; sessionManagement.ts:151, 650."
+    },
+    "source": "Sourdaw collaboration module and relay server at 95128133a2."
+  },
+  {
+    "id": "dissect-13",
+    "repo": "sd",
+    "at": "b77759c2b3a579324b61d34b26c22cbad21a187e",
+    "paths": [
+      "src"
+    ],
+    "tools": [],
+    "request": "Transport/AGENTS.md says delete-time edits must call deleteTimelineMapsTimeRange. Who calls it? Production only, and if nobody, what does a delete-time edit use instead for the tempo map?",
+    "key": {
+      "correct": "Nobody in production. deleteTimelineMapsTimeRange appears only in its own file, its barrel export Transport/useCases/index.ts:26, a comment in syncTransportMapsToNativeSession.ts:13, Transport/AGENTS.md:25, and its spec. Global time operations rewrite the tempo/meter map through deps.prepareTimelineMapTimeOperation at executeGlobalTimeOperation.ts:1507, wired in src/app/bootstrap.ts:405-412 by setTimeOperationDependencies (imported at bootstrap.ts:192), whose implementation is prepareTimelineMapTimeOperation.ts:577.",
+      "flaws": "Listing the barrel export or the comment as a caller; trusting AGENTS.md and asserting a caller exists; not finding the dependency-injected prepareTimelineMapTimeOperation path; counting the spec.",
+      "evidence": "At b77759c2b3: Transport/useCases/index.ts:26; syncTransportMapsToNativeSession.ts:13; Transport/AGENTS.md:25; executeGlobalTimeOperation.ts:1507; src/app/bootstrap.ts:192, 405-412; prepareTimelineMapTimeOperation.ts:577. The function was removed by the next commit e495c9ba8a."
+    },
+    "source": "Sourdaw Transport time-operation code at b77759c2b3, before the dead export was removed in e495c9ba8a."
+  },
+  {
+    "id": "dissect-14",
+    "repo": "sd",
+    "at": null,
+    "paths": null,
+    "tools": [],
+    "request": "registerDependencies says AudioEngine handles yeast.notesOff. Trace yeast.notesOff from the Yeast worker to whatever actually releases the notes, and tell me when it can get lost.",
+    "key": {
+      "correct": "YeastWorkerClient node.onNotesOff -> yeastRuntime.ts:685-690 -> emitNotesOff (yeastRuntime.ts:324-338), which buffers into pendingNotesOff until a handler is set. The handler is installed by setYeastRuntimeNotesOffHandler (yeastRuntime.ts:928) from configureYeastRuntime.ts:10-19 (called at src/app/bootstrap.ts:401) and emits 'yeast.notesOff' on the YeastEventBus (the global eventBus, bootstrap.ts:399). The subscriber is in MIDI, not AudioEngine: initWebMidi.ts:57-101 subscribeToYeastNotesOff on the WebMidiEventBus (bound by setWebMidiRuntimeEventBus at bootstrap.ts:404). It runs releaseCapturedYeastLifecycleVoices, releaseHeldYeastVoices, then routeYeastNoteOffsForTargetTrack, which re-emits 'midi.noteOff' for GrandBoule (initWebMidi.ts:97) and otherwise uses getTrackStrip. That subscription exists only after initWebMidi runs (useAppInitialization.ts:89 after initializeAudioEngine, or MidiDevicePicker.tsx:36,50). Loss window: the runtime buffer covers only the time before the handler is set; once set, an emit before initWebMidi has subscribed is dropped because createEventBus.ts emit returns early with no handlers (about line 32).",
+      "flaws": "Naming an AudioEngine subscriber, trusting the registerDependencies comment; missing the pendingNotesOff buffer or claiming it protects all early events; missing that the subscription depends on initWebMidi; ending without the midi.noteOff re-emit for GrandBoule.",
+      "evidence": "yeastRuntime.ts:324-338, 685-690, 928; configureYeastRuntime.ts:10-19; src/app/bootstrap.ts:399, 401, 404; initWebMidi.ts:57-101 (97); useAppInitialization.ts:89; MidiDevicePicker.tsx:36, 50; src/infra/events/createEventBus.ts about line 32; registerDependencies.ts comment."
+    },
+    "source": "Sourdaw Yeast runtime, event bus wiring and Web MIDI init at 95128133a2."
+  },
+  {
+    "id": "dissect-15",
+    "repo": "sd",
+    "at": null,
+    "paths": null,
+    "tools": [],
+    "request": "Who calls getDrumKitByIndex? There are two of them, I want callers of both, production only, including anything going through aliases or injected deps.",
+    "key": {
+      "correct": "Raw factory A, AudioEngine/models/FactoryDrumKits.ts:560. Production callers of A: useCases/audioEngineQueries/getDrumKitByIndex.ts:1,8 (wrapper B, imports A as getDrumKitByIndexFromFactory); services/deviceResolution.ts:5,11 (resolveDrumKit); and through the alias getFactoryDrumKitByIndex (getFactoryDrumKitByIndex.ts:5, exported at AudioEngine useCases/index.ts:13): Project/useCases/getCanonicalTrackRole.ts:404, and MIDI midiMessageHandlerDependencies.ts:57 which injects it as deps.getDrumKitByIndex, used at handleWebMidiNoteOn.ts:499 and voiceYeastNoteOn.ts:173. Wrapper B (exported at AudioEngine useCases/index.ts:12) is called by Transport/useCases/scheduling/resolveDrumKit.ts:1,13 and AudioEngine/useCases/audition.ts:15,122.",
+      "flaws": "Mixing up which callers hit A and which hit B; missing the getFactoryDrumKitByIndex alias callers; missing the injected deps.getDrumKitByIndex uses in MIDI or counting the deps property as a separate function; listing tests.",
+      "evidence": "FactoryDrumKits.ts:560; audioEngineQueries/getDrumKitByIndex.ts:1, 8; deviceResolution.ts:5, 11; getFactoryDrumKitByIndex.ts:5; AudioEngine useCases/index.ts:12, 13; getCanonicalTrackRole.ts:404; midiMessageHandlerDependencies.ts:57; handleWebMidiNoteOn.ts:499; voiceYeastNoteOn.ts:173; Transport scheduling/resolveDrumKit.ts:1, 13; audition.ts:15, 122."
+    },
+    "source": "Sourdaw AudioEngine drum kit lookups at 95128133a2."
+  },
+  {
+    "id": "dissect-16",
+    "repo": "sd",
+    "at": null,
+    "paths": null,
+    "tools": [],
+    "request": "Which time-range edits rewrite the tempo/meter map? I care about the keyboard ones: mod+Backspace, Delete on a marquee, insert silence, duplicate range.",
+    "key": {
+      "correct": "mod+Backspace (shortcut arrangement.deleteTimeRange, shortcutStore.ts:386-393) does NOT: handleKeydown.ts:457 -> clipEditing/deleteTimeRange.ts -> executeSelectedTimeRangeDeletion, which uses only deps.prepareMidiGlobalTimeTransaction (line 1442) and deps.prepareAutomationTimeOperation (line 1452) and whose inverse plan sets timelineMap: null (line 1326). Delete/Backspace with a marquee (deleteSelectionShortcut, handleKeydown.ts:539-549) takes the same path, so it does not either. Insert silence (mod+shift+i -> executeUndoableInsertTime -> insertTime) and duplicate range (mod+shift+r -> executeUndoableDuplicateTimeRange -> duplicateTimeRange) DO, as do the deleteTime, insertTime and duplicateTimeRange app actions (handleDeleteTime.ts:47 etc.): all reach executeGlobalTimeOperation.ts:1607 deps.prepareTimelineMapTimeOperation, wired at src/app/bootstrap.ts:430-437.",
+      "flaws": "Saying mod+Backspace or marquee Delete rewrites the tempo map because the deleteTime action does; confusing the deleteTimeRange shortcut with the deleteTime action; missing that marquee Delete shares the selected-range path; not tracing the injected dependency to bootstrap.",
+      "evidence": "shortcutStore.ts:386-393; handleKeydown.ts:457, 539-549; executeSelectedTimeRangeDeletion lines 1326, 1442, 1452; handleDeleteTime.ts:47; executeGlobalTimeOperation.ts:1607; src/app/bootstrap.ts:430-437."
+    },
+    "source": "Sourdaw time-range editing paths at 95128133a2."
+  },
+  {
+    "id": "dissect-17",
+    "repo": "sd",
+    "at": null,
+    "paths": null,
+    "tools": [],
+    "request": "If the user closes a plugin editor with its own title-bar close button, how does the app find out the editor is closed? Trace it, and tell me when the app would not be told.",
+    "key": {
+      "correct": "electron pluginGui.ts:644-653 'close' handler calls preventDefault and beginDetach -> detachThenDestroy (555-567) -> reportClosedWindow (539-545) -> deps.notifyClosed; the 'closed' handler (655-666) also reports. registerPluginWindowHost binds notifyClosed (pluginGui.ts:1033, 1052-1056) to napi notify_plugin_window_closed (addon/mod.rs:267) -> plugin_gui.rs:627 reset_plugin_gui_state_after_os_close, which emits PLUGIN_GUI_CLOSED_EVENT (about line 672) only when it removed this window; a lost claim returns without emitting. The event then goes main onEvent -> generic forwarder -> EVENT_CHANNEL -> preload bridge -> PluginHost onPluginGuiClosed.ts:26 desktopListen -> watchPluginGuiClosed.ts:27-28 recordPluginGuiState(isOpen:false). The renderer subscription starts only on the first openPluginGui (openPluginGui.ts:35). No event: when the native side no longer owns that window (lost claim), or before any openPluginGui call installed the watcher.",
+      "flaws": "Saying the renderer learns it through a BrowserWindow event or IPC from pluginGui.ts directly; missing the native round trip; missing the removed_this_window condition; missing the lazy subscription in openPluginGui.",
+      "evidence": "electron pluginGui.ts:539-545, 555-567, 644-666, 1033, 1052-1056; crates/sourdaw-native/src/addon/mod.rs:267; plugin_gui.rs:627, about 672; onPluginGuiClosed.ts:26; watchPluginGuiClosed.ts:27-28; openPluginGui.ts:35."
+    },
+    "source": "Sourdaw plugin editor window lifecycle at 95128133a2."
+  },
+  {
+    "id": "dissect-18",
+    "repo": "sd",
+    "at": null,
+    "paths": null,
+    "tools": [],
+    "request": "Who calls EngineHandle::clear_midi_notes and EngineHandle::schedule_midi_notes in daw-engine? Include tests.",
+    "key": {
+      "correct": "Nobody, tests included. EngineHandle::schedule_midi_notes (daw-engine/src/lib.rs:1102) and EngineHandle::clear_midi_notes (lib.rs:1123) have zero callers in the repository. The calls at scheduler.rs:6869 and 6880 are to AudioScheduler's own private methods of the same names (scheduler.rs:7721, 7747, inside impl AudioScheduler starting at line 6243), applied when GraphCommand::ScheduleMidiNotes / ClearMidiNotes is processed; native graph.rs:4505 and 4608 push those GraphCommands into a batch sent via send_graph_batch. scheduler.rs:5988 is a third clear_midi_notes on the effect slot, unrelated.",
+      "flaws": "Listing scheduler.rs:6869/6880 or graph.rs as callers of the EngineHandle methods; assuming wasm-bindgen JS calls them without checking for any JS reference; counting the effect-slot clear_midi_notes.",
+      "evidence": "daw-engine/src/lib.rs:1102, 1123; scheduler.rs:5988, 6243, 6869, 6880, 7721, 7747; native graph.rs:4505, 4608; no schedule_midi_notes/clear_midi_notes reference in src/, electron/ or Rust tests that targets EngineHandle."
+    },
+    "source": "Sourdaw daw-engine Rust crate at 95128133a2."
+  },
+  {
+    "id": "dissect-19",
+    "repo": "sd",
+    "at": null,
+    "paths": null,
+    "tools": [],
+    "request": "Playing a live MIDI note into a native instrument on desktop: which Rust function actually receives it? Is EngineHandle::send_midi_note on that path?",
+    "key": {
+      "correct": "sendNativeLiveMidiNote.ts builds {kind: 'send-midi-note'} -> backend.apply -> apply_graph_commands -> native graph.rs:4531 GraphCommand::SendMidiNote, applied in the graph. EngineHandle::send_midi_note (daw-engine/src/lib.rs:1062) is not on that path: its only caller is plugins.rs:2812 inside send_plugin_midi (plugins.rs:2798), whose napi wrapper (addon/mod.rs:937) is a denied command (electron/commands.ts:244) with no JS caller, so EngineHandle::send_midi_note is dead in production.",
+      "flaws": "Saying the note goes through EngineHandle::send_midi_note or send_plugin_midi; missing that send_plugin_midi is denied and uncalled; stopping at the renderer without the GraphCommand.",
+      "evidence": "sendNativeLiveMidiNote.ts; native graph.rs:4531; daw-engine/src/lib.rs:1062; plugins.rs:2798, 2812; crates/sourdaw-native/src/addon/mod.rs:937; electron/commands.ts:244."
+    },
+    "source": "Sourdaw live MIDI path to native instruments at 95128133a2."
+  },
+  {
+    "id": "dissect-20",
+    "repo": "sd",
+    "at": null,
+    "paths": null,
+    "tools": [],
+    "request": "How is addAdjustmentRegion handled? List every dispatcher and say which handler path each one ends up in.",
+    "key": {
+      "correct": "adjustmentLayerHandlers.ts:98-118 picks by payload: with expectedLayer and regionId it runs plain handleAddAdjustmentRegion; otherwise it goes through withFreezeStaleness (lines 58-93), whose describe snapshots an inverse restoreAdjustmentLayerMutation and whose execute goes through commitAdjustmentLayerMutation. validate without those fields requires a single-action batch (lines 100-104). The map is registered via the spread at getArrangementHandlers.ts:251. Dispatchers: UI Alt-click in AdjustmentLayerStrip.tsx:362-366 -> wrapper path; the undo inverse of removeAdjustmentRegion (handleRemoveAdjustmentRegion.ts:97-107, carries regionId and expectedLayer) -> direct path; the AI materializer materializeActionStateGuards.ts:214-228 (carries both) -> direct path; the raw LLM strategy automationRangeStrategy.ts:146 (lacks both) -> wrapper path, subject to the single-action rule.",
+      "flaws": "Describing a single handler; missing the payload-based split; missing the undo inverse or AI materializer dispatchers; missing the single-action batch restriction; not finding the registration through the spread.",
+      "evidence": "adjustmentLayerHandlers.ts:58-93, 98-118 (100-104); getArrangementHandlers.ts:251; AdjustmentLayerStrip.tsx:362-366; handleRemoveAdjustmentRegion.ts:97-107; materializeActionStateGuards.ts:214-228; automationRangeStrategy.ts:146."
+    },
+    "source": "Sourdaw Arrangement adjustment-layer handlers and dispatchers at 95128133a2."
+  },
+  {
+    "id": "dissect-21",
+    "repo": "sd",
+    "at": null,
+    "paths": null,
+    "tools": [],
+    "request": "List every way a user can open the Export Audio dialog.",
+    "key": {
+      "correct": "The dialog renders only at AppShell.tsx:1169 and opens only through AppShell.tsx:397-399 onOpenExport -> setExportOpen(true), fed by onDialogOpenExport ('dialog.openExport'), emitted only by openExportDialog.ts:8. openExportDialog has four callers: (1) RecentProjectsMenu.tsx:117; (2) palette command 'export-audio' in ProjectCommands.ts:46-54; (3) shortcut project.openExportDialog, mod+shift+e (shortcutStore.ts:197-201) -> handleKeydown.ts:395-396; (4) macOS menu 'project:export-audio' (electron applicationMenu.ts:267, Cmd+Shift+E) -> useNativeApplicationMenu.ts:193-194.",
+      "flaws": "Missing the native menu or the recent-projects menu entry; missing the event hop (dialog.openExport) and listing only direct setExportOpen sites; inventing a project-export route that opens a different dialog.",
+      "evidence": "AppShell.tsx:397-399, 1169; openExportDialog.ts:8; RecentProjectsMenu.tsx:117; ProjectCommands.ts:46-54; shortcutStore.ts:197-201; handleKeydown.ts:395-396; electron applicationMenu.ts:267; useNativeApplicationMenu.ts:193-194."
+    },
+    "source": "Sourdaw export dialog entry points at 95128133a2."
+  },
+  {
+    "id": "dissect-22",
+    "repo": "sd",
+    "at": null,
+    "paths": null,
+    "tools": [],
+    "request": "What happens when the renderer process crashes on desktop? Every branch.",
+    "key": {
+      "correct": "electron/main.ts:937-971 render-process-gone ignores reason clean-exit and windows other than the main window. rendererCrashRecovery.ts recover then branches: (a) shouldRecreate false (rendererSessionLifecycle teardownApproved, rendererSessionLifecycle.ts:15-17, wired at main.ts:656): clear pending, destroy the window, clear mainWindow; (b) rate limit exhausted, 3 crashes per 60 s (main.ts:918-919): clearPending, destroy, windowCloseCoordinator.clearForNoWindow, then showErrorBox; (c) otherwise createReplacement = createAndActivateWindow runs BEFORE the crashed window is destroyed (beginRendererSession main.ts:174, startWindow, registerWindow, which is a no-op while a pending window exists), then recoverPendingWindow (nativeMenuActionDispatcher.ts:84-89), then destroyCrashedMainWindow (mainWindowTeardown.ts:69-81).",
+      "flaws": "Missing the teardownApproved branch or the rate limit; getting the order wrong (destroy before recreate); missing the clean-exit and non-main filters; missing the menu dispatcher pending-window recovery.",
+      "evidence": "electron/main.ts:174, 656, 918-919, 937-971; electron rendererCrashRecovery.ts; rendererSessionLifecycle.ts:15-17; nativeMenuActionDispatcher.ts:84-89; mainWindowTeardown.ts:69-81."
+    },
+    "source": "Sourdaw Electron renderer crash recovery at 95128133a2."
+  },
+  {
+    "id": "dissect-23",
+    "repo": "sd",
+    "at": "84833f57dfcc1605ceb47b763a78d85c172e73c4",
+    "paths": [
+      "src"
+    ],
+    "tools": [],
+    "request": "Which handlers in src/modules/WorkspaceShell/handlers/workspace actually run when their action is dispatched? For any that don't, tell me what runs instead.",
+    "key": {
+      "correct": "The folder has 28 handler files; getWorkspaceHandlers.ts registers only 17: closeMixer, exportProject, importAudioFile, importMidiFile, newProject, openMixer, openPreferencesDialog, saveProject, setEditingTool, setMarqueeSelection, setSnapValue, setWorkspaceMode, toggleChatPanel, toggleInspector, toggleSidebar, zoomToFit, zoomToSelection. The other 11 are unregistered duplicates that never run: addAutomationLane, addAutomationPoint, removeAutomationPoint (real ones registered in Automation getAutomationHandlers.ts:51, 54, 61); addMarker, removeMarker, setMarkerColor, addSection, removeSection, renameSection (real ones in Arrangement getArrangementHandlers.ts:163-168, handlers/marker/*); humanizeNotes, quantizeNotes (real ones in MIDI getMidiNoteTransformHandlers.ts:43, 46). Registering both would throw on duplicate registration in the handler registry.",
+      "flaws": "Assuming every file in the folder is live; missing some of the 11; naming the wrong module for the real handler; claiming both copies run or the later one overrides.",
+      "evidence": "At 84833f57df: src/modules/WorkspaceShell/handlers/workspace/ (28 files); getWorkspaceHandlers.ts; getAutomationHandlers.ts:51, 54, 61; getArrangementHandlers.ts:163-168; getMidiNoteTransformHandlers.ts:43, 46; handler registry duplicate check. The dead files were removed in the next commit 7de48a8428."
+    },
+    "source": "Sourdaw WorkspaceShell handlers at 84833f57df, before the duplicates were removed in 7de48a8428."
+  },
+  {
+    "id": "dissect-24",
+    "repo": "sd",
+    "at": null,
+    "paths": null,
+    "tools": [],
+    "request": "When the Crumbs mode changes, how does the change reach the audio worklet and the native side? All entry points too.",
+    "key": {
+      "correct": "Entry function is switchCrumbsMode, exported from Crumbs useCases/setCrumbsMode.ts:28 (not repositories/crumbsBridge/setCrumbsMode.ts, which is the desktopInvoke('set_crumbs_mode') IPC call). Callers: CrumbsPanel.tsx:380; reconcileCrumbsDeviceStateFromProject.ts:161 (via reconcileCrumbsDeviceStatesFromProject.ts:20); handleFileDrop.ts:62. Path: switchCrumbsMode -> setMode on the store -> emitCrumbsModeChanged (crumbsEventBus.ts:31-36, silent when the bus is unset; set by setCrumbsEventBus at src/app/bootstrap.ts:400) -> app seam initCrumbsModePush.ts:29-44 (installed at bootstrap.ts:704) -> deviceNode.crumbsControls.setMode (worklet) -> then the native set_crumbs_mode IPC.",
+      "flaws": "Treating the repository setCrumbsMode as the entry point because of the file name; missing the event bus hop and the app-level seam; missing the project reconcile or file-drop callers; missing that emit is a no-op when the bus is unset.",
+      "evidence": "Crumbs useCases/setCrumbsMode.ts:28; repositories/crumbsBridge/setCrumbsMode.ts; CrumbsPanel.tsx:380; reconcileCrumbsDeviceStateFromProject.ts:161; reconcileCrumbsDeviceStatesFromProject.ts:20; handleFileDrop.ts:62; crumbsEventBus.ts:31-36; initCrumbsModePush.ts:29-44; src/app/bootstrap.ts:400, 704."
+    },
+    "source": "Sourdaw Crumbs device mode wiring at 95128133a2."
+  },
+  {
+    "id": "dissect-25",
+    "repo": "sd",
+    "at": null,
+    "paths": null,
+    "tools": [],
+    "request": "If the native addon fails to load in a normal (non-scoped) desktop run, what happens? Main startup, renderer commands, plugin scan, Open dialog.",
+    "key": {
+      "correct": "electron/main.ts:736-753 catches the load error and rethrows only when runtimeScope is defined, so a normal run continues with no host. Router registration is unconditional (main.ts:760-787); every routed command rejects at router.ts:198-201 with '<cmd> rejected: the native host is not available'. In the renderer only two callers recognize that via isNativeHostUnavailableError (src/utils/desktopBridge.ts:48): getEngineRtDiagnostics.ts:122-135 retires the surface and returns not-running, and unloadPlugin.ts:79-85 returns the browser-like result; other callers (for example Crumbs getWaveformPeaks through ensureNative, which only checks the desktop runtime) get the rejection. scan_plugins is excluded from the router (main.ts:786) and registered by registerScanCommand (electron/appIpc.ts:61-85) with its own utility-process supervisor, so it does not depend on the addon. The Open dialog's grantPickedPaths returns without granting when the host is undefined (appIpc.ts:129-141), but the picked path is still returned to the renderer (appIpc.ts:230-256).",
+      "flaws": "Saying the app quits or shows an error at startup; saying all renderer calls degrade gracefully; missing that scan_plugins runs separately; missing the Open dialog returning ungranted paths.",
+      "evidence": "electron/main.ts:736-753, 760-787 (786); electron router.ts:198-201; src/utils/desktopBridge.ts:48; getEngineRtDiagnostics.ts:122-135; unloadPlugin.ts:79-85; electron/appIpc.ts:61-85, 129-141, 230-256."
+    },
+    "source": "Sourdaw Electron native host loading and command routing at 95128133a2."
+  },
+  {
+    "id": "dissect-26",
+    "repo": "sd",
+    "at": null,
+    "paths": null,
+    "tools": [],
+    "request": "commands.ts says every exposed command has a production caller. Is that true for the collab_* CRDT commands?",
+    "key": {
+      "correct": "No. The only call sites are the six CrdtDocument/repositories/nativeCrdtPersistence files nativeApplyChange, nativeCreateProject, nativeGetDocumentState, nativeLoadBundle, nativeMergeBundle and nativeSaveBundle, which call through invokeCommand.ts:8 (a dynamic await import('#/utils/desktopBridge')). None of those six, nor isNativeCrdtAvailable, is imported by production code; only __tests__ use them (nativeCrdtPersistence.spec.ts, invokeCommand.desktopRuntime.spec.ts). crdtProjectLifecycle.spec.ts vi.mocks isNativeCrdtAvailable, which is not a production use.",
+      "flaws": "Saying they are used because the command strings appear in the repository files; counting the vi.mock in crdtProjectLifecycle.spec.ts as evidence of a production importer; stopping at invokeCommand without checking who imports the six wrappers.",
+      "evidence": "electron/commands.ts exposed list and its production-caller comment; CrdtDocument/repositories/nativeCrdtPersistence/*.ts; invokeCommand.ts:8; nativeCrdtPersistence.spec.ts; invokeCommand.desktopRuntime.spec.ts; crdtProjectLifecycle.spec.ts vi.mock; no non-test import of the six or isNativeCrdtAvailable."
+    },
+    "source": "Sourdaw CrdtDocument native persistence bridge at 95128133a2."
+  },
+  {
+    "id": "dissect-27",
+    "repo": "sd",
+    "at": null,
+    "paths": null,
+    "tools": [],
+    "request": "What UI reaches the native denoise_audio command? Production only, every hop.",
+    "key": {
+      "correct": "denoise_audio is invoked only at AiGeneration/repositories/nativeAIBridge/audioDenoising.ts:24 inside denoiseAudio (line 18), via invokeAI.ts, which dynamically imports desktopInvoke from #/utils/desktopBridge and throws outside the desktop runtime. AiGeneration/useCases/nativeAiBridge/denoiseAudio.ts:1,7 wraps it under the alias denoiseAudioFromNativeBridge with a same-named export. That wrapper is used only by handleAiDenoiseClip (useCases/actions/handleAiDenoiseClip.ts:6, 80, call at 94), and only inside the isDesktopRuntime() branch (line 92); the browser branch uses a JS expander. handleAiDenoiseClip is exported by the AiGeneration useCases barrel (index.ts:1) and called from three UI sites: Arrangement ClipContextMenu.tsx:184 (via runAiActionWithToast, passing clip.audioBufferId), TimelineEditor Inspector ClipAudioAiSection.tsx:54, and TimelineEditor ClipView WaveformEditor.tsx:576. The barrel also re-exports denoiseAudio (index.ts:13) but nothing imports it.",
+      "flaws": "Missing one of the three UI sites; treating the barrel re-export of denoiseAudio as a caller; missing the desktop-only branch; confusing the two same-named denoiseAudio functions; missing the dynamic import seam.",
+      "evidence": "audioDenoising.ts:18, 24; invokeAI.ts; useCases/nativeAiBridge/denoiseAudio.ts:1, 7, 13; handleAiDenoiseClip.ts:6, 80, 92, 94; AiGeneration/useCases/index.ts:1, 13; ClipContextMenu.tsx:184; ClipAudioAiSection.tsx:54; WaveformEditor.tsx:576; src/utils/sourdawCommandArguments.ts:60 and electron/commands.ts:85 only declare the command."
+    },
+    "source": "Sourdaw AiGeneration denoise path at 95128133a2."
+  },
+  {
+    "id": "dissect-28",
+    "repo": "sd",
+    "at": null,
+    "paths": null,
+    "tools": [],
+    "request": "On desktop, if the native denoise call throws, what does the user see from each place they can trigger denoise?",
+    "key": {
+      "correct": "handleAiDenoiseClip (AiGeneration/useCases/actions/handleAiDenoiseClip.ts:80) catches every error (catch at lines 134-148), records it only as task status 'error' via updateTask, and resolves normally; it never rethrows. So: ClipContextMenu.tsx:184 wraps it in runAiActionWithToast, whose catch never fires, so the user gets the success toast 'Audio denoised' (runAiActionWithToast.ts:19-20); ClipAudioAiSection.tsx:54-59 switches A/B to 'processed' and shows 'Denoise complete', and its catch ('Denoise failed', line 61) never fires; WaveformEditor.tsx:576 fires and forgets, so nothing is shown. The only visible trace of the failure is an error row (AiTaskResultCard.tsx:81) in the GenerativeAiPanel task list (mounted at AppShell.tsx:624), seen only if that panel is open. No '-denoised' buffer is cached on failure.",
+      "flaws": "Saying the user gets an error toast from runAiActionWithToast or ClipAudioAiSection's catch; missing that handleAiDenoiseClip swallows the error; missing the AI panel task row as the only failure signal; treating the three entry points as behaving the same.",
+      "evidence": "handleAiDenoiseClip.ts:80-149 (catch 134-148); runAiActionWithToast.ts:13-29; ClipContextMenu.tsx:184-189; ClipAudioAiSection.tsx:42-64; WaveformEditor.tsx:576; AiGeneration/useCases/actions/updateTask.ts; AiTaskResultCard.tsx:81; GenerativeAiPanel.tsx:280; AppShell.tsx:624."
+    },
+    "source": "Sourdaw AiGeneration denoise error handling and its UI callers at 95128133a2."
+  },
+  {
+    "id": "dissect-29",
+    "repo": "sk",
+    "at": null,
+    "paths": null,
+    "tools": [],
+    "request": "Which fail branches in scripts/lint.sh does scripts/test-lint.sh never exercise?",
+    "key": {
+      "correct": "Five never fire under test-lint.sh: 'skills/ is empty' (lint.sh:17); the first 'nested payload under skills/' check, find -mindepth 4 (lint.sh:21), because the nested-file and agents-extra mutations sit at depth 3 and hit the second check (lint.sh:22-23), which prints the same message; 'missing $file' (lint.sh:29); '$name has a relative link' (lint.sh:74-75); and 'reference-style or angle-bracket link' (lint.sh:82-83). The other branches are covered by the 17 mutations: catalog mismatch, holds something other (extra-file, symlink), second nested check (nested-file, agents-extra), invalid frontmatter (yaml-colon, long-description, bad-invocation, angle-bracket), unknown key, user-invoked openai.yaml (missing-yaml, bad-yaml), agents/ without the flag, self-name, sibling-name, method-name, broken-link.",
+      "flaws": "Counting the first nested-payload check as covered because the message matches; missing the relative-link or reference-style branches; listing a covered branch as uncovered.",
+      "evidence": "/tmp/snap/sk scripts/lint.sh:17, 21-23, 29, 74-75, 82-83; scripts/test-lint.sh mutation list (17 cases) and their file depths."
+    },
+    "source": "José's skills repository lint gate at e03ea04."
+  },
+  {
+    "id": "dissect-30",
+    "repo": "sk",
+    "at": null,
+    "paths": null,
+    "tools": [],
+    "request": "AGENTS.md says reference-style and angle-bracket links are rejected and skills carry no relative links. Does lint.sh actually enforce that inside a SKILL.md? Which link forms get through?",
+    "key": {
+      "correct": "Only partly. The reference-style/angle-bracket check (lint.sh:82-83) runs only over README.md, AGENTS.md and docs/*.md (loop at lint.sh:80), never over skills/*/SKILL.md. Inside a SKILL.md the only link check is lint.sh:74, grep -Eq '\\]\\([^)#:]*\\)', which rejects an inline target with no '#' and no ':'. So these pass in a SKILL.md: reference-style uses [text][ref] and definitions [ref]: ../x.md (no '](' at all); angle-bracket links to absolute URLs such as ](<https://...>) (contain ':'); and relative links that carry a fragment, such as ](../../docs/sources.md#x), because '#' is excluded from the character class. An angle-bracket relative link ](<../x.md>) and a fragment-less relative link are caught. A fragment link that names a sibling skill folder is still caught, but by the sibling-name check (lint.sh:64-69), not the link check. The broken-link existence check (lint.sh:85-88) also never runs on SKILL.md.",
+      "flaws": "Saying lint.sh enforces the AGENTS.md link rules everywhere; missing that the line 80-88 loop excludes skills/; missing the '#' exclusion that lets relative links with fragments through; claiming all angle-bracket links pass or all are caught.",
+      "evidence": "/tmp/snap/sk scripts/lint.sh:64-69, 74-75, 80-88; AGENTS.md edit contract link rules. Regex checked against sample strings: '](../x/SKILL.md#y)' passes, '](../x/SKILL.md)' fails, '[a][r]' passes, '[r]: ../x.md' passes, '](<../x.md>)' fails, '](<https://e.com>)' passes, '](/abs/p)' fails."
+    },
+    "source": "José's skills repository lint gate and AGENTS.md at e03ea04."
+  },
+  {
+    "id": "dissect-31",
+    "repo": "sd",
+    "at": null,
+    "paths": null,
+    "tools": [],
+    "request": "Every production path that ends up calling the Web Audio engine's setSend (createWebAudioEngine.ts). Include anything going through aliases, and tell me which user actions reach each.",
+    "key": {
+      "correct": "There are three functions named setSend. The engine method (AudioEngine/repositories/createWebAudioEngine.ts:2240) is called only by AudioEngine useCases/engineAccess/setSend.ts:4 (barrel AudioEngine/useCases/index.ts:131). That wrapper is called only by Routing useCases/busControls/setSend.ts:14, which imports it as setSendEngine (line 2) and drops the call when either endpoint is not a routing endpoint (lines 8-13). Routing's setSend (barrel Routing/useCases/index.ts:3) has exactly five production call sites in four Arrangement files: Arrangement useCases/device/sendManagement/setSend.ts:88 (finalizeRuntimeEffect) and :97 (reconcileRuntimeEffect), both via the alias engineSetSend (import line 5); removeSend.ts:51 (reconcile when the committed send still exists, alias engineSetSend, line 1); toggleSendPreFader.ts:32 (alias engineSetSend, line 1); projectTrackToLiveStrip.ts:109 replayTrackSends (plain named import, line 10), which runs on the many strip rebuilds and restores. Arrangement's setSend is reached from handleSetSend.ts:83 ('setSend' action) and handleAddSend.ts:60 ('addSend' action), both registered at getArrangementHandlers.ts:244-245, and directly (not through an app action) from RoutingMatrix.tsx:148, Inspector SendsEditor.tsx:94 and Mixer SendsSection.tsx:37. toggleSendPreFader is reached from SendsEditor.tsx:66 and SendsSection.tsx:52. Arrangement removeSend is reached from handleRemoveSend.ts:28 and RoutingMatrix.tsx:123.",
+      "flaws": "Mixing up the three setSend functions, for example listing the UI components as direct callers of the Routing or AudioEngine setSend; missing the call sites hidden behind the engineSetSend / setSendEngine aliases (removeSend.ts:51 and toggleSendPreFader.ts:32 are the usual misses); missing projectTrackToLiveStrip's replay; missing the second call inside Arrangement setSend (the reconcile leg); counting AI strategy 'setSend' strings as code callers.",
+      "evidence": "createWebAudioEngine.ts:2240; AudioEngine engineAccess/setSend.ts:4; AudioEngine/useCases/index.ts:131; Routing busControls/setSend.ts:2, 8-14; Routing/useCases/index.ts:3; Arrangement sendManagement/setSend.ts:2-6, 88, 97; removeSend.ts:1, 51; toggleSendPreFader.ts:1, 32; projectTrackToLiveStrip.ts:10, 106-112; handleSetSend.ts:83; handleAddSend.ts:60; getArrangementHandlers.ts:244-246; RoutingMatrix.tsx:123, 148; SendsEditor.tsx:66, 94; SendsSection.tsx:37, 52. No other .setSend( call exists in src outside tests."
+    },
+    "source": "Sourdaw send routing across Arrangement, Routing and AudioEngine at 95128133a2."
+  },
+  {
+    "id": "dissect-32",
+    "repo": "sd",
+    "at": null,
+    "paths": null,
+    "tools": [],
+    "request": "What reacts when a device finishes loading? I want every emitter of audioDevice.loaded (which device types) and every subscriber, with the conditions.",
+    "key": {
+      "correct": "Emitters: only AudioEngine/engine/wasmDeviceRegistry.ts, through getAudioDeviceRuntimeSink().emitDeviceLoaded, at five sites: Toaster (line 442), Bacteria (1223), Grand Boule (1775), Faust modules (1882) and the transient shaper (2082). Each is skipped when the load's runtime failure was handled first. No other descriptor emits it: Levain, Crumbs, ProofChamber, Gluten, Crust, Grinder, Proof, Scoring and Knead loads never do. The sink defaults to no-ops (audioDeviceRuntimeSink.ts:237-238) until src/app/bootstrap.ts:555-561 configureAudioDeviceRuntimeSink forwards to eventBus.emit('audioDevice.loaded'). Subscribers, all on the global bus: Toaster toasterSubscriber.ts:29 (deviceType 'toaster' and an eligible write target; hydrates the WASM engine from the store; installed at bootstrap.ts:670); Bacteria bacteriaSubscriber.ts:31 (deviceType bacteria and non-empty modulation assignments from the project; bootstrap.ts:680); Grand Boule grandBouleSubscriber.ts:16 (deviceType grand-boule; reconcileGrandBouleDeviceStateFromProject), installed through composeGrandBoule.ts:18, called at bootstrap.ts:685. So Faust-module and transient-shaper loads emit with no subscriber reacting. audioDevice.removed is emitted only from TrackNode.ts:1377 and handled only by Toaster (toasterSubscriber.ts:96).",
+      "flaws": "Missing the Grand Boule subscriber because it is wired in composeGrandBoule.ts rather than bootstrap.ts; listing all device types as emitters; missing that Faust and transient-shaper loads emit to nobody; missing the default no-op sink; missing the per-subscriber filters.",
+      "evidence": "wasmDeviceRegistry.ts:442, 1223, 1775, 1882, 2082 (descriptors begin at 306, 1060, 1653, 1787, 2009); audioDeviceRuntimeSink.ts:54-55, 237-238; src/app/bootstrap.ts:555-561, 670, 680, 685; src/app/composeGrandBoule.ts:18; toasterSubscriber.ts:29-37, 96-101; bacteriaSubscriber.ts:31-43; grandBouleSubscriber.ts:16-21; TrackNode.ts:1377."
+    },
+    "source": "Sourdaw device lifecycle events at 95128133a2."
+  },
+  {
+    "id": "dissect-33",
+    "repo": "sd",
+    "at": null,
+    "paths": null,
+    "tools": [],
+    "request": "List every way a user can split a clip, and tell me which of them end up on the undo stack.",
+    "key": {
+      "correct": "All splits end in Arrangement useCases/clipEditing/splitClip.ts:78, which pushes no undo entry itself. Paths: (1) Clip context menu 'Split at Cursor', ClipContextMenu.tsx:388-392 -> executeUserAppAction({type:'splitClip'}) -> handleSplitClip (handlers/clip/handleSplitClip.ts:122, registered in clipHandlers, spread into getArrangementHandlers.ts:252) -> undoable through the action system. (2) Cut tool click: useTimelineInteractions.ts:340 handleCutTool -> timelineTools.ts:38-50 -> splitClipWithUndo.ts:19. That splits audio and MIDI differently: an audio clip dispatches the 'splitClip' app action (splitClipWithUndo.ts:35-37); a MIDI clip calls splitClip directly (line 71) and pushes a hand-built undo entry with pushUndoEntry (line 90). Both are undoable. (3) Command palette 'Split Clip at Playhead', CommandInterface/useCases/commands/ClipCommands.ts:41-52, calls the splitClip use case directly through the Arrangement barrel (ClipCommands.ts:2, 50; CommandPalette.tsx:88-89 runs function actions as-is). It goes through neither an app action nor pushUndoEntry, so it is NOT undoable. (4) The AI clip strategy clipPlacementStrategies.ts:245-262 emits a 'splitClip' action, executed through the action system. There is no keyboard shortcut for split.",
+      "flaws": "Saying every split is undoable; missing that the palette command bypasses the action system; treating the cut tool as one path when audio and MIDI clips diverge in splitClipWithUndo; inventing a keyboard shortcut; missing the context menu path.",
+      "evidence": "splitClip.ts:78; ClipContextMenu.tsx:386-394; handleSplitClip.ts:122; clipHandlers.ts; getArrangementHandlers.ts:252; useTimelineInteractions.ts:340; timelineTools.ts:38-50; splitClipWithUndo.ts:19, 35-37, 71, 90; ClipCommands.ts:2, 41-52; CommandPalette.tsx:86-92; clipPlacementStrategies.ts:245-262; no split entry in shortcutStore.ts."
+    },
+    "source": "Sourdaw clip split entry points and undo at 95128133a2."
+  },
+  {
+    "id": "dissect-34",
+    "repo": "sd",
+    "at": null,
+    "paths": null,
+    "tools": [],
+    "request": "Every production code path that ends in the engine's setTrackGain method (createWebAudioEngine.ts). Through aliases and injected deps too.",
+    "key": {
+      "correct": "Direct callers of audioEngine.setTrackGain (createWebAudioEngine.ts:1932): (a) AudioEngine useCases/trackAudioControls/setTrackGain.ts:4 (wrapper W, barrel AudioEngine/useCases/index.ts:212); (b) AudioEngine useCases/adjustmentLayer/sharedAdjustmentLayerApplier.ts:56, 121, 133, 137; (c) MIDI useCases/webMidiInput/handleWebMidiCC.ts:185, CC 7 on the target track, which writes the engine directly and bypasses the Arrangement setter. Callers of W: Arrangement setTrackGainPan/setTrackGain.ts:45 (alias engineSetTrackGain, line 1); Arrangement projectTrackToLiveStrip.ts:225; Arrangement toggleTrackState/applySoloLogic.ts:50; Transport applyAutomation/applyVcaGains.ts:24 and reconcileVcaRuntimeGain.ts:80 (both alias engineSetTrackGain). Callers of the Arrangement setTrackGain (barrel Arrangement/useCases/index.ts:53): handleSetTrackGain.ts:83 ('setTrackGain' action, getArrangementHandlers.ts:150); TrackLevelSection.tsx:38, 125; useChannelStripActions.ts:210, 234, 388, 398; and MIDI learn: bootstrap.ts:30 imports it as setTrackGainArrangement and injects it at bootstrap.ts:545 into setMidiLearnDependencies; ControlSurface handleMidiMessage.ts:42 calls deps.setTrackGainArrangement for a 'trackGain' mapping. That handleMidiMessage is itself reached from MIDI as deps.applyMidiMappings (alias at midiMessageHandlerDependencies.ts:13, bound at :50, called at handleWebMidiCC.ts:177).",
+      "flaws": "Treating the two setTrackGain functions as one; missing the direct engine writes in sharedAdjustmentLayerApplier or handleWebMidiCC; missing the Transport VCA callers behind the engineSetTrackGain alias; missing the MIDI-learn path through the setTrackGainArrangement injection and the applyMidiMappings alias; counting AI action strings.",
+      "evidence": "createWebAudioEngine.ts:1932; trackAudioControls/setTrackGain.ts:4; AudioEngine/useCases/index.ts:212; sharedAdjustmentLayerApplier.ts:56, 121, 133, 137; handleWebMidiCC.ts:177, 185; setTrackGainPan/setTrackGain.ts:1, 38, 45; projectTrackToLiveStrip.ts:4, 225; applySoloLogic.ts:1, 50; applyVcaGains.ts:3, 24; reconcileVcaRuntimeGain.ts:5, 80; Arrangement/useCases/index.ts:53; handleSetTrackGain.ts:8, 83; getArrangementHandlers.ts:150; TrackLevelSection.tsx:9, 38, 125; useChannelStripActions.ts:9, 210, 234, 388, 398; src/app/bootstrap.ts:30, 544-553; midiLearnDependencies.ts:18; handleMidiMessage.ts:18, 42; midiMessageHandlerDependencies.ts:13, 50."
+    },
+    "source": "Sourdaw track gain paths across Arrangement, AudioEngine, Transport, MIDI and ControlSurface at 95128133a2."
+  },
+  {
+    "id": "dissect-35",
+    "repo": "sd",
+    "at": null,
+    "paths": null,
+    "tools": [],
+    "request": "A hosted VST changes its latency mid-session (turns on oversampling). Trace everything that happens, native and renderer, and tell me what actually re-aligns playback.",
+    "key": {
+      "correct": "Native side: crates/sourdaw-native/src/host/latency_watcher.rs serve_channel_wake (line 183) or service_pending_restarts (line 214) re-queries the plugin; when the re-query returns a change (latency_change_payload, lines 100-118: Ok(Some) only) it emits plugin-latency-changed (lines 192, 228) and, separately, publish_compensation (lines 197, 235; fn at 155) aims the native graph's compensation at the new figure. That publish_compensation is what re-aligns playback. Renderer side: the event goes through main's generic forwarder to desktopListen in PluginHost onPluginLatencyChanged.ts:26 (drops payloads without instance_id/latency_ms, lines 27-30) -> watchExternalPluginLatency.ts:27-33, which drops it when no reporter is registered for that instance -> the reporter, registered only when the activation passed onLatencyMs (activateExternalPlugin.ts:150-155), is reportLatency(deviceId, ms) from handleLoadExternalPlugin.ts:132 or projectTrackToLiveStrip.ts:76 -> reportLatency.ts:3-4 writes externalLatencyRegistry. Its only reader, getDeviceLatencyMs.ts:33-38, returns 0 for device type 'external-plugin' before it reads the registry (lines 34-36). So the renderer half changes no compensation for a hosted plugin; the onPluginLatencyChanged doc comment saying the change reaches compensation is misleading.",
+      "flaws": "Saying the renderer recomputes plugin delay compensation from the event; missing the native publish_compensation; missing the external-plugin early return in getDeviceLatencyMs; missing the drop when no reporter is registered; trusting the onPluginLatencyChanged comment.",
+      "evidence": "latency_watcher.rs:37, 100-118, 155, 183-199, 214-235; onPluginLatencyChanged.ts:14-33; watchExternalPluginLatency.ts:22-38; activateExternalPlugin.ts:150-155, 197; handleLoadExternalPlugin.ts:132; projectTrackToLiveStrip.ts:76; reportLatency.ts:3-4; externalLatencyRegistry.ts; getDeviceLatencyMs.ts:17-38 (comment and code); no other reader of externalLatencyRegistry except clearReportedLatency/clearAllReportedLatency."
+    },
+    "source": "Sourdaw hosted plugin latency path across Rust and the renderer at 95128133a2."
+  },
+  {
+    "id": "dissect-36",
+    "repo": "sd",
+    "at": null,
+    "paths": null,
+    "tools": [],
+    "request": "List every UI entry point that runs a manual save, the one that can ask for a folder (saveProject with requestFolderSelection). Ignore the AI agent.",
+    "key": {
+      "correct": "saveProject (Project/useCases/projectPersistence/saveProject/saveProject.ts:219) is called with requestFolderSelection: true at six sites; one of them is dead: (1) RecentProjectsMenu.tsx:113 handleSave; (2) command palette 'save-project', ProjectCommands.ts:36-43; (3) keyboard mod+s, shortcut project.saveProject (shortcutStore.ts:190-194) -> appAction 'saveProject' -> WorkspaceShell handleSaveProject.ts:4-7, registered in getWorkspaceHandlers; (4) desktop menu, useNativeApplicationMenu.ts:141-156 case 'project:save'; (5) double-clicking the project name, ProjectName.tsx:61; (6) useAppEventHandlers.ts:31 on the 'project.save' event, which nothing emits, so it never runs. Other saveProject calls do not request a folder: autosave useAppInitialization.ts:227, saveProjectBeforeReplacement.ts:69 and resetCrdtProjectWithTransportStopped.ts:114.",
+      "flaws": "Missing the recent-projects menu or the project-name double-click; listing the useAppEventHandlers subscriber as live; listing the mod+s shortcut as calling saveProject directly (it goes through the app action and handler); mixing in autosave or the before-replacement saves.",
+      "evidence": "saveProject.ts:219; RecentProjectsMenu.tsx:112-114; ProjectCommands.ts:36-43; shortcutStore.ts:190-194; handleSaveProject.ts:4-7; useNativeApplicationMenu.ts:141-156; ProjectName.tsx:61; useAppEventHandlers.ts:29-31 (no emitter of 'project.save' in src); useAppInitialization.ts:227; saveProjectBeforeReplacement.ts:69; resetCrdtProjectWithTransportStopped.ts:114."
+    },
+    "source": "Sourdaw project save entry points at 95128133a2."
+  },
+  {
+    "id": "dissect-37",
+    "repo": "sd",
+    "at": null,
+    "paths": null,
+    "tools": [],
+    "request": "Who unloads native plugin instances from the renderer? Every production caller of the unload, and whether each one unloads one instance or everything.",
+    "key": {
+      "correct": "The unload_plugin IPC is sent only from PluginHost/repositories/pluginBridge/unloadPlugin.ts:76. That repository is called only by the PluginHost use case unloadPlugin (useCases/pluginLifecycle/unloadPlugin.ts:134, which imports the repository as unloadPluginRepo at line 61 and calls it at 123). With no argument it unloads every instance; with an id it unloads one, and skips an id that is not loaded. Callers of the use case: one instance: Arrangement prepareRemoveDevice.ts:171 (device removal). Everything: beginProjectSessionPluginRetirement.ts:21 (from projectSessionQuiescer.ts:29, 98); resetExternalPluginRuntimeForGraphRebuild.ts:23 (from Transport repairRuntimeGraphFromProject.ts:36); and five Project call sites that import it under the alias unloadLoadedExternalPlugins: createFromTemplate.ts:152, loadProject.ts:200, newProject.ts:165, resetCrdtProjectWithTransportStopped.ts:134, replaceProjectData.ts:265.",
+      "flaws": "Missing the five aliased Project call sites; confusing the repository and use-case unloadPlugin; saying every caller unloads one instance; counting Electron main's native shutdown as a renderer caller.",
+      "evidence": "pluginBridge/unloadPlugin.ts:76; pluginLifecycle/unloadPlugin.ts:61, 115-145; PluginHost/useCases/index.ts:16; prepareRemoveDevice.ts:2, 171; beginProjectSessionPluginRetirement.ts:5, 21; projectSessionQuiescer.ts:29, 98; resetExternalPluginRuntimeForGraphRebuild.ts:5, 23; repairRuntimeGraphFromProject.ts:36; createFromTemplate.ts:8, 152; loadProject.ts:23, 200; newProject.ts:12, 165; resetCrdtProjectWithTransportStopped.ts:3, 134; replaceProjectData.ts:15, 265."
+    },
+    "source": "Sourdaw PluginHost unload lifecycle at 95128133a2."
+  },
+  {
+    "id": "dissect-38",
+    "repo": "sd",
+    "at": null,
+    "paths": null,
+    "tools": [],
+    "request": "Every path that changes the active editing tool. And is any of the setEditingTool functions dead?",
+    "key": {
+      "correct": "The only writer is WorkspaceShell useCases/setEditingTool.ts:10 (updateWorkspaceState({activeTool})). Callers: ToolSelector.tsx:47 (arrow-key radio navigation), :96 and :133 (clicks); handleSetEditingTool.ts:18, the 'setEditingTool' app action (registered getWorkspaceHandlers.ts:51; unknown tools rejected at line 15), dispatched by the five palette entries in ViewCommands.ts:202-234; handleKeydown.ts:621, the tool hotkeys, imported from the WorkspaceShell barrel (import statement starting at handleKeydown.ts:22); finishToolSwap.ts:30, which restores the previous tool when a tool key was held longer than 300 ms (called from handleKeyup.ts:12; startToolSwap at handleKeydown.ts:692 only records the swap). Dead: CommandInterface/useCases/keyboardShortcutActions/workspaceShortcuts/setEditingTool.ts, a wrapper (alias setEditingToolImpl) that nothing in production imports; only specs import or vi.mock it.",
+      "flaws": "Listing the CommandInterface wrapper as the path hotkeys take, misled by the test mocks; missing the hold-to-swap restore in finishToolSwap; missing the palette action path or ToolSelector's arrow-key path; claiming startToolSwap writes the tool.",
+      "evidence": "WorkspaceShell/useCases/setEditingTool.ts:5-11; ToolSelector.tsx:19, 47, 96, 133; handleSetEditingTool.ts:15, 18; getWorkspaceHandlers.ts:51; ViewCommands.ts:202-234; handleKeydown.ts:22, 621, 692; handleKeyup.ts:12; finishToolSwap.ts:30; startToolSwap.ts; keyboardShortcutActions/workspaceShortcuts/setEditingTool.ts; vi.mock in handleKeyboardShortcut.spec.ts:29 and handleKeydownStoredBindings.spec.ts:51."
+    },
+    "source": "Sourdaw editing tool state and keyboard handling at 95128133a2."
+  },
+  {
+    "id": "dissect-39",
+    "repo": "sd",
+    "at": null,
+    "paths": null,
+    "tools": [],
+    "request": "What can mark the open project dirty? Every path, including subscriptions and native events.",
+    "key": {
+      "correct": "markDirty (Project/useCases/projectPersistence/saveProject/markDirty.ts:3) does nothing while the project is loading or already dirty. Its callers: initProjectDirtyTracking.ts:14-15 (any trackStore change and any tempoProjectRevisionStore change; installed at bootstrap.ts:718); initGrooveTemplateDirtyTracking.ts:6 (bootstrap.ts:719); initPluginStateDirtyTracking.ts:27 (native plugin-state-dirty: Rust plugin_host_requests.rs:357 -> desktopListen in onPluginStateDirty.ts:25 -> watchPluginStateDirty.ts:14) and :40 (observeExternalPluginParameterEdits, 'value' edits only), installed at bootstrap.ts:722; arrangement ops createArrangement.ts:36, duplicateArrangement.ts:36, renameArrangement.ts:14, switchArrangement.ts:108; importSclFile.ts:67 (Sidebar ProjectTab.tsx:59); markOutgoingProjectDirtyAfterAbort.ts:21, only when unsaved closed takes exist (from newProject.ts:62 and replaceProjectData.ts:155). Direct projectStore writes of dirty: true: renameProject.ts:8, and saveProject.ts:310, which keeps the project dirty until the save's durable writes finish. useNativeApplicationMenu.ts:278's dirty: true is the native menu's projectState payload when there is no project, not a projectStore write.",
+      "flaws": "Missing the native plugin-state path or the parameter-edit observer; missing the groove or tempo stores; missing the arrangement operations or the abort helper; counting useNativeApplicationMenu.ts:278 as marking the project dirty; missing the loading guard.",
+      "evidence": "markDirty.ts:3-31; initProjectDirtyTracking.ts:14-15; initGrooveTemplateDirtyTracking.ts:6; initPluginStateDirtyTracking.ts:25-48; watchPluginStateDirty.ts:13-16; onPluginStateDirty.ts:21-32; crates plugin_host_requests.rs:56, 357; src/app/bootstrap.ts:718, 719, 722; createArrangement.ts:36; duplicateArrangement.ts:36; renameArrangement.ts:14; switchArrangement.ts:108; importSclFile.ts:67; ProjectTab.tsx:59; markOutgoingProjectDirtyAfterAbort.ts:19-23; newProject.ts:62; replaceProjectData.ts:155; renameProject.ts:8; saveProject.ts:306-310; useNativeApplicationMenu.ts:273-285."
+    },
+    "source": "Sourdaw project dirty tracking at 95128133a2."
+  },
+  {
+    "id": "dissect-40",
+    "repo": "sd",
+    "at": null,
+    "paths": null,
+    "tools": [],
+    "request": "Every code path that ends an arrangement recording take (the stopRecording that finalizes the take), and what triggers each.",
+    "key": {
+      "correct": "There are two stopRecording functions: Arrangement useCases/recording/stopRecording.ts:292 finalizes the take; Crumbs repositories/crumbsBridge/stopRecording.ts:3 is the sampler's IPC and is unrelated. The Arrangement one has two callers, both in Transport: finalizeAutomaticRecording.ts:27 and stopActiveRecording.ts:33. finalizeAutomaticRecording is called at punch-out (startPlayheadScheduler.ts:1548, at the punch-out beat) and from stopPlayheadScheduler.ts:45 when a punch recording is active (line 35). stopActiveRecording is called from stopPlayback.ts:30, pausePlayback.ts:117, executePlayheadSeek.ts:150 (a seek while recording or with a pending start), and toggleRecording.ts:643 (inside beginRecordingAndMaybePlayback when the transport hold never rolled and the stopped recording is still owned), 719 (toggle with a pending start) and 724 (toggle while recording).",
+      "flaws": "Including the Crumbs stopRecording callers (armCrumbsRecording, stopCrumbsRecording, syncCrumbsRecordingState); missing the punch-out path or the stopPlayheadScheduler finalize; missing the seek or pause paths; missing the three toggleRecording sites.",
+      "evidence": "Arrangement recording/stopRecording.ts:292; Arrangement/useCases/index.ts:228; Crumbs crumbsBridge/stopRecording.ts:3; finalizeAutomaticRecording.ts:2, 27; stopActiveRecording.ts:2, 33; startPlayheadScheduler.ts:1548; stopPlayheadScheduler.ts:35, 45; stopPlayback.ts:30; pausePlayback.ts:117; executePlayheadSeek.ts:143-150; toggleRecording.ts:643, 719, 724."
+    },
+    "source": "Sourdaw Transport recording teardown at 95128133a2."
+  },
+  {
+    "id": "dissect-41",
+    "repo": "sd",
+    "at": null,
+    "paths": null,
+    "tools": [],
+    "request": "How is removeAdjustmentRegion handled? Every dispatcher and which handler path each one takes.",
+    "key": {
+      "correct": "adjustmentLayerHandlers.ts:120-141 picks by payload: with expectedRegion it runs plain handleRemoveAdjustmentRegion; without it, it goes through removeAdjustmentRegionWithFreezeStaleness (withFreezeStaleness wrapper, lines 60-93 and 96), and validate then requires a single-action batch (lines 123-128). The map entry is at line 150 and the map is spread into getArrangementHandlers.ts:251. Dispatchers: the UI region delete in AdjustmentLayerStrip.tsx:346 (layerId and regionId only) takes the wrapper path. The undo inverse of a direct-path addAdjustmentRegion, handleAddAdjustmentRegion.ts:160-180, carries expectedRegion and takes the direct path; an add without regionId/expectedLayer produces no such inverse (line 162-164). Macro playback (Command/useCases/macro/playback.ts:140-144) remaps the layer and region ids of recorded removeAdjustmentRegion actions and replays them with their recorded payload. No AI strategy emits it.",
+      "flaws": "Describing one handler; missing the expectedRegion split or the single-action batch rule; missing that the inverse comes from addAdjustmentRegion's describe only on the direct path; inventing an AI dispatcher; not finding the registration through the spread.",
+      "evidence": "adjustmentLayerHandlers.ts:60-96, 120-141, 150; getArrangementHandlers.ts:251; AdjustmentLayerStrip.tsx:346; handleAddAdjustmentRegion.ts:160-180; handleRemoveAdjustmentRegion.ts:76; Command/useCases/macro/playback.ts:140-144; no removeAdjustmentRegion reference in src/modules/AiRuntime."
+    },
+    "source": "Sourdaw Arrangement adjustment-layer handlers at 95128133a2."
+  },
+  {
+    "id": "dissect-42",
+    "repo": "sd",
+    "at": null,
+    "paths": null,
+    "tools": [],
+    "request": "Which files under src/modules/CommandInterface/useCases/keyboardShortcutActions are dead in production?",
+    "key": {
+      "correct": "Eight wrapper files have no production importer: workspaceShortcuts/setEditingTool.ts, workspaceShortcuts/zoomToFit.ts, workspaceShortcuts/zoomToSelection.ts, trackShortcuts/addTrack.ts, trackShortcuts/clearSolos.ts, trackShortcuts/duplicateClip.ts, trackShortcuts/duplicateClipToNextBar.ts and trackShortcuts/zoomTracksVertical.ts. Each just forwards to a same-named WorkspaceShell or Arrangement function, and only specs import or vi.mock them (handleKeyboardShortcut.spec.ts:22-31, handleKeydownStoredBindings.spec.ts:44-53, workspaceShortcuts.spec.ts, trackShortcuts.spec.ts). Live: handleKeyboardShortcut/handleKeydown.ts and handleKeyup.ts (imported by presentations/views/keyboardShortcutsContract.ts:12-13), clipShortcuts/duplicateClipSelectingCopy.ts and duplicateSelectedClipsForward.ts (handleKeydown.ts:50-51), and trackShortcuts/duplicateTrack.ts (handleKeydown.ts:52). handleKeydown takes setEditingTool and selectAllClips from the module barrels, and zoom to fit/selection go through app actions in shortcutStore.ts:324-341.",
+      "flaws": "Calling the wrappers live because grep finds production callers of addTrack, clearSolos, zoomToFit and the rest (those are the WorkspaceShell or Arrangement functions of the same name); being misled by the vi.mock calls in the keydown specs; calling trackShortcuts/duplicateTrack dead; missing some of the eight.",
+      "evidence": "Folder listing of keyboardShortcutActions; the only non-test references to clipShortcuts/trackShortcuts/workspaceShortcuts are handleKeydown.ts:50-52; keyboardShortcutsContract.ts:12-13; handleKeydown.ts import block lines 1-52; shortcutStore.ts:324-341; specs handleKeyboardShortcut.spec.ts:22-31, handleKeydownStoredBindings.spec.ts:44-53."
+    },
+    "source": "Sourdaw CommandInterface keyboard shortcut actions at 95128133a2."
+  }
+]

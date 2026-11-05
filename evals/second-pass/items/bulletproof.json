@@ -1,0 +1,756 @@
+[
+  {
+    "id": "bulletproof-01",
+    "repo": "sd",
+    "at": null,
+    "paths": null,
+    "tools": [],
+    "request": "Writing the CONTRIBUTING section on CI. My draft says: every push to a PR runs the full validation — types, lint, boundaries, the unit suite, the production build and the Rust/server gates — and Gate goes green or red on that push. Prettier checks the whole repo. Confirm or fix it, with file refs.",
+    "key": {
+      "correct": "Draft is wrong in several places. A push runs pr-checks.yml, which calls validation.yml with mode: preliminary and mints no Gate (not required). Preliminary runs Decide scope, Types and contracts (static, unconditional), Lint (pnpm lint:full, only if code=true), Module boundaries (deps:validate, only if code=true), Review tooling unit suite (only for the tooling profile), Offline browser smoke (only when the browser plan selects it), dependency review and the PR diff secret scan. The unit shards, Production build, Rust workspace+collab server gates and the native macOS/Windows/parity jobs run only when mode == 'full', i.e. in health-gates.yml after the reviewer App's approval label admits the exact head; the result job even asserts they are 'skipped' in preliminary. Gate, CodeQL and the affected E2E matrix exist only in health-gates.yml. The format step is prettier --check on src/**/*.{ts,tsx}, scripts/**/*.ts and electron/**/*.ts only, not the whole repo. Typecheck steps for app/test/e2e/desktop are skipped for the tooling profile.",
+      "flaws": "Saying a push runs the unit suite, build, or Rust/server gates; saying Gate is produced per push; saying prettier checks JSON/MD/CSS/tests/server; treating AGENTS.md's 'PR CI owns broad unit and Rust suites' as per-push.",
+      "evidence": ".github/workflows/pr-checks.yml:1-6,80-87 (mode: preliminary); .github/workflows/health-gates.yml:1-11,127-131 (mode: full); validation.yml:376 (prettier globs), 413-454 (lint if code), 490-492 / 647-649 / 679-681 / 787 / 889 / 931 (if inputs.mode == 'full'), 1184-1230 (broad() => skipped in preliminary)."
+    },
+    "source": "Live workflow files at 95128133a2 vs the AGENTS.md CI summary."
+  },
+  {
+    "id": "bulletproof-02",
+    "repo": "sd",
+    "at": null,
+    "paths": null,
+    "tools": [],
+    "request": "Is it true `pnpm lint:full` (what CI runs) lints the whole repo — src, scripts, electron, tests/e2e, server — and that warn-level rules like the size-ceiling baseline still show up in CI output? I'm about to tell an agent that lint will catch a hooks-purity problem in a tests/e2e helper.",
+    "key": {
+      "correct": "No on both. scripts/runLint.ts --full lints only src, scripts and electron (FULL_OXLINT_TARGETS / FULL_ESLINT_TARGETS); tests/e2e, server/ and root config files are not linted by lint:full, and CI's only lint invocations are validation.yml:454 and nightly.yml:178, both lint:full. Both oxlint and eslint run with --quiet, so warn-level rules neither fail nor print: that includes the size-baseline downgrade (max-lines etc. set to 'warn' for baseline files, whose comment claims they 'keep reporting'), react-hooks/purity, react-hooks/refs, set-state-in-effect and ~26 oxlint 'warn' rules. So a purity issue would be invisible both because tests/e2e is outside the targets and because the rule is warn. Also: plain `pnpm lint` without files throws 'file target required', and --fix with --full is refused.",
+      "flaws": "Claiming tests/e2e or server are linted in CI; claiming warnings are reported or fail; missing --quiet; missing that react-hooks/purity is warn-level.",
+      "evidence": "scripts/runLint.ts:35-43,95-105,145-146,150-160; eslint.config.mjs:2618-2637 (size baseline 'warn' with 'keep reporting' comment), 2665-2669 (react-hooks/purity etc. 'warn'); .oxlintrc.json 'warn' entries; .github/workflows/validation.yml:447-454; nightly.yml:178."
+    },
+    "source": "runLint.ts, eslint/oxlint configs and workflow lint steps."
+  },
+  {
+    "id": "bulletproof-03",
+    "repo": "sd",
+    "at": null,
+    "paths": null,
+    "tools": [],
+    "request": "Briefing reviewers on four PRs, want the stance floors right. (a) 40-line fix in src/modules/AudioEngine/useCases/... plus its spec, (b) one dep bump: package.json + pnpm-lock.yaml, 12 lines, (c) lockfile-only refresh of pnpm-lock.yaml, (d) 30-line change touching src/modules/Arrangement and src/modules/MIDI. I have them as small=2, small-tooling=3, small=2, small=2. Right?",
+    "key": {
+      "correct": "Only (c) is right. In scripts/reviewRiskPolicy.ts a size class (small/small-tooling/ordinary) is assigned only when no specialist finding exists (decideFindings returns the specialist findings alone). (a) src/modules/AudioEngine/ is a REALTIME_AUDIO prefix -> riskClasses ['realtime-audio'] only, earning correctness, realtime-audio, test-validity -> floor 3. (b) package.json is in NATIVE_SECURITY_PATHS -> ['native-security'] only (correctness, security-platform, test-validity) -> floor 3, not small-tooling. (c) pnpm-lock.yaml is grouped 'generated', matches no specialist path, and with no handwritten side sizeFinding yields 'small' -> floor 2 (correctness, test-validity). (d) two module domains -> 'cross-domain' only (correctness, module-boundaries, test-validity) -> floor 3. Floor rule: a single class in FIXED_STANCE_FLOORS (docs-only 1, test-only 1, small 2) else min(3, earned stances).",
+      "flaws": "Assigning 'small' to (a) or (d) because of line count; calling (b) small-tooling; saying a specialist class adds to the size class rather than replacing it; wrong floor arithmetic.",
+      "evidence": "scripts/reviewRiskPolicy.ts:59-69 (REQUIRED_STANCES), 71-76, 108-127 (package.json at 116), 319-337, 346-361, 380-392, 440-451; scripts/reviewDiffSummary.ts:42,137-148 (lockfiles -> generated)."
+    },
+    "source": "review:prepare risk plan code vs the AGENTS.md floor summary."
+  },
+  {
+    "id": "bulletproof-04",
+    "repo": "sd",
+    "at": null,
+    "paths": null,
+    "tools": [],
+    "request": "Release note for #6211 (engine reaches device modules through composition-root ports). I want to write: 'AudioEngine, Transport, MIDI and Project no longer import any device module; the engine-to-device direction is now fully enforced.' Is that literally true at HEAD?",
+    "key": {
+      "correct": "No. Synth is a device-tier module (.dependency-cruiser.module-tiers.cjs) and is still imported by AudioEngine (useCases/audition.ts:9, useCases/offlineRender/scheduleTrackClips.ts:16), MIDI (useCases/webMidiInput/midiMessageHandlerDependencies.ts:21) and Transport (useCases/scheduling/scheduleMidiNotes.ts:33, resolveDrumKitDef.ts:1); the module-tier baseline still carries AudioEngine->Synth, MIDI->Synth, Transport->Synth (and Arrangement->Synth). Project is the one of the four with no device import left. #6211 removed 13 baseline rows (AudioEngine->Crumbs/Grinder/Yeast, MIDI->GrandBoule/Levain/Yeast, Project->Crumbs/Levain/Toaster/Yeast, Transport->Crumbs/Toaster/Yeast) and dropped those device modules from the cycle, so the accurate note is 'no longer import any device module except Synth'.",
+      "flaws": "Repeating the PR body's 'no longer import any device module' or 'finishes the engine-to-device direction' as fact; missing the Synth edges; claiming Project still imports Levain.",
+      "evidence": ".dependency-cruiser-known-violations-module-tiers.json (rows AudioEngine->Synth, MIDI->Synth, Transport->Synth, Arrangement->Synth); .dependency-cruiser.module-tiers.cjs (Synth tier 'device'); git show 724d59947b -- .dependency-cruiser-known-violations-module-tiers.json; the import lines cited."
+    },
+    "source": "Commit 724d59947b (#6211) body vs the baseline and live imports."
+  },
+  {
+    "id": "bulletproof-05",
+    "repo": "sd",
+    "at": null,
+    "paths": null,
+    "tools": [],
+    "request": "For the ADR: since #6130 made sourdaw/no-foreign-store-write an error, lint guarantees no module can write another module's stores. Can I state that?",
+    "key": {
+      "correct": "No. The rule (eslint.config.mjs ~1835-1960) only reports calls whose method is literally set or update (line ~1943) on an identifier bound by a non-type named import from another module's stores barrel (`<Module>/stores` or `stores/index` only), or a const alias of it, in production files under src/ (tests and fixtures excluded). Store also has trySet, clear and hydrate (src/infra/store/types.ts:46-75), which are not flagged. It recognises a store only if the barrel export traces to a direct createStore(...) call (or `new Store` from #/helpers/Store/Store or #/infra/store/Store, paths that do not exist); hand-written or factory stores are invisible, e.g. MIDI's midiStore (object literal with set/update/clear/hydrate, midiStore.ts:443) and grandBouleStore (createGrandBouleStore factory, grandBouleStore.ts:110), both exported from their stores barrels. Writes through a store passed as an argument, a let alias, or destructured methods also escape. The claim that it is an error-level rule since #6130 is true.",
+      "flaws": "Saying the rule covers all writes; missing clear/trySet/hydrate; missing that midiStore/grandBouleStore are not recognised as stores; asserting a guarantee.",
+      "evidence": "eslint.config.mjs:848-854 (stores barrel only), 925-951, 982-1060 (createStore/Store detection), 1850, 1943, 2594; src/infra/store/types.ts:43-75; src/modules/MIDI/stores/midiStore.ts:430-470; src/modules/GrandBoule/stores/grandBouleStore.ts:72-110; src/modules/MIDI/stores/index.ts:9; git log -S on eslint.config.mjs -> 85b14f55fa."
+    },
+    "source": "#6130 body and docs/architecture/05-boundary-enforcement-limits.md pattern 6 vs the rule implementation."
+  },
+  {
+    "id": "bulletproof-06",
+    "repo": "sd",
+    "at": null,
+    "paths": null,
+    "tools": [],
+    "request": "New agent onboarding blurb: 'TanStack Query is wired but has no call sites yet; React context is always consumed with use(), never useContext.' That's from docs/03-state-management.md. Still accurate?",
+    "key": {
+      "correct": "No, both are stale. TanStack Query has a live call site: src/modules/Fermenter/presentations/views/FermenterPanel.tsx imports useQuery/useQueryClient (line 3) and uses them for user patches (around lines 494-553, including invalidateQueries). useContext is used in src/components/ui/dialog.tsx:110 (FocusOpenerContext). The doc lines making those claims are docs/03-state-management.md:3, 9 and 105.",
+      "flaws": "Confirming the doc without grepping; finding only one of the two; claiming a lint rule bans useContext.",
+      "evidence": "docs/03-state-management.md:3,9,105; src/modules/Fermenter/presentations/views/FermenterPanel.tsx:3,494-553; src/components/ui/dialog.tsx:110."
+    },
+    "source": "State-management doc vs live code."
+  },
+  {
+    "id": "bulletproof-07",
+    "repo": "sd",
+    "at": null,
+    "paths": null,
+    "tools": [],
+    "request": "docs/04-events.md says the event bus is asynchronous and non-blocking. So if a track.added subscriber is slow or throws, the emitting use case isn't affected — right? I want to rely on that for a heavy analysis listener.",
+    "key": {
+      "correct": "Partly wrong. createEventBus.emit is an async function, but it calls every handler synchronously inside emit before its first await (src/infra/events/createEventBus.ts:39-60): a synchronous handler runs to completion, in subscription order, typed handlers before wildcard (onAny) handlers, before emit returns its promise, so a slow sync listener blocks the emitter. Only async handlers' continuations run later, and emit's promise waits for them via Promise.allSettled. Errors never propagate: sync throws and async rejections are caught and logged with logger.warn, so emit never rejects and the emitter cannot learn a listener failed. Handlers are taken from a snapshot at emit time, so a handler added during emit does not see that event.",
+      "flaws": "Accepting 'non-blocking'; saying handlers are queued as microtasks/tasks; saying a throwing listener fails the use case or rejects emit; missing that awaiting emit waits for async handlers.",
+      "evidence": "src/infra/events/createEventBus.ts:26-90; src/infra/events/internal/createSubscriptionRegistry.ts getSnapshot; docs/04-events.md:34."
+    },
+    "source": "Events doc claim vs event bus implementation."
+  },
+  {
+    "id": "bulletproof-08",
+    "repo": "sd",
+    "at": null,
+    "paths": null,
+    "tools": [],
+    "request": "If everyone enables .githooks, is the commit-msg hook the same rule as our PR titles? I want to say 'the hook enforces the PR title convention locally, plus prettier/lint before commit'.",
+    "key": {
+      "correct": "No. .githooks holds only commit-msg; there is no pre-commit hook, so nothing formats or lints before commit. The hook accepts types feat|fix|chore|docs|test|refactor|perf|build|ci|style|revert, while PR titles (prContract.ts TITLE_PATTERN from LANE_CHANGE_TYPES) accept only the nine lane types, deliberately excluding style (and revert is in neither LANE_CHANGE_TYPES nor releaseVersion CONVENTIONAL_TYPES). The hook restricts scope to [a-z0-9,._/-] (so 'fix(AudioEngine): ...' fails the hook but passes TITLE_PATTERN, which allows any non-')' scope), caps subjects at 100 chars (no such cap in TITLE_PATTERN), and lets Merge/Revert/fixup!/squash!/Reapply/comment/empty subjects through. It only runs when core.hooksPath is set and can be bypassed with --no-verify.",
+      "flaws": "Saying hook and title rule are identical; claiming a pre-commit format/lint hook exists; missing the style/revert difference or the scope-charset difference.",
+      "evidence": ".githooks/commit-msg (only file); scripts/prContract.ts:20-32,56; scripts/releaseVersion.ts:22."
+    },
+    "source": "Hook vs PR title contract."
+  },
+  {
+    "id": "bulletproof-09",
+    "repo": "sd",
+    "at": null,
+    "paths": null,
+    "tools": [],
+    "request": "All our vendor instruction files are just AGENTS.md, right? I want to point Copilot users at .github/copilot-instructions.md and say it's the same contract.",
+    "key": {
+      "correct": "No. CLAUDE.md, CODEX.md, GEMINI.md, KIMI.md and ZCODE.md at the root are symlinks to AGENTS.md, but .github/copilot-instructions.md is a separate 68-line file with its own rules. It cites an AGENTS.md section 'TypeScript — soundness' that does not exist (AGENTS.md headings: Ownership, Delegation, Review, Docs, DAW Standard, Resource Safety, Checks, Map, Architecture, Code craft, Worktrees, Artifacts, Delivery, Safety; the soundness section lives in docs/07-conventions.md). It tells agents about react-i18n and react-form-hooks, which are not dependencies (package.json has @tanstack/react-query, no i18n or react-hook-form; docs/02-forms.md says react-hook-form is not installed), and adds rules absent from AGENTS.md (object input for >2 params, Dummy classes). Last touched in old commits (47810c66d2, 22a84b2166).",
+      "flaws": "Assuming copilot-instructions is a symlink/copy; not noticing the dangling section reference or the nonexistent libraries.",
+      "evidence": "ls -la (symlinks); .github/copilot-instructions.md; grep '^## ' AGENTS.md; docs/07-conventions.md:7; package.json:118; docs/02-forms.md:5-6."
+    },
+    "source": "Vendor instruction file layout."
+  },
+  {
+    "id": "bulletproof-10",
+    "repo": "sd",
+    "at": null,
+    "paths": null,
+    "tools": [],
+    "request": "What does CI's Rust gate actually check? I'm telling contributors that clippy warnings block merge and that sourdaw-native is clippy-clean in CI.",
+    "key": {
+      "correct": "Both claims are false. The Rust job runs only in the admitted full run (validation.yml:679-681, if rust or server touched) via pnpm health:server:full = scripts/health-gates-rust.sh + health-gates-server.sh. The Rust script runs cargo fmt --all --check, cargo clippy --workspace --exclude sourdaw-native --all-targets --all-features and cargo test --workspace --exclude sourdaw-native --all-features (debug). There is no `-- -D warnings`, no RUSTFLAGS deny, no [workspace.lints] and no crate-level #![deny], so clippy warnings do not fail; only errors/deny-by-default lints do. sourdaw-native is excluded from clippy everywhere (nightly and cargo-dependency-seed run the same script); it is only tested with cargo test --package sourdaw-native on the macOS native job, and the Windows job tests only daw-core, daw-dsp, daw-engine. The server half runs npm test and npm run build in server/.",
+      "flaws": "Saying clippy warnings fail CI; saying sourdaw-native is linted; saying the Rust gate runs on every push.",
+      "evidence": "scripts/health-gates-rust.sh; scripts/health-gates-server.sh; package.json health:server:full; .github/workflows/validation.yml:679-681,766-770,842-850,915-918; nightly.yml:357; cargo-dependency-seed.yml:67; Cargo.toml (no lints table); .cargo/config.toml rustflags."
+    },
+    "source": "Rust gate scripts vs a plausible contributor claim."
+  },
+  {
+    "id": "bulletproof-11",
+    "repo": "sd",
+    "at": null,
+    "paths": null,
+    "tools": [],
+    "request": "I'm changing four things: (a) a doc comment in crates/daw-core/src/lib.rs, (b) a #[cfg(test)] block in crates/daw-dsp/src/grinder/oversample.rs, (c) crates/daw-dsp/src/grinder/nam/fixtures/wavenet.nam, (d) crates/daw-io/src/lib.rs. Which committed wasm packages does wasm:verify consider stale? AGENTS.md says only non-test edits change the hash, so I think just (d) matters.",
+    "key": {
+      "correct": "Wrong. The source hash (scripts/wasm-artifacts.ts hashCrateClosure) covers every .rs file under src/** of the crate and its path-dependency closure, plus each Cargo.toml and build.rs; only tests/ and benches/ are outside it. Closures: daw-dsp = {daw-dsp}; proof-chamber = {proof-chamber}; scoring = {scoring, daw-dsp} (path dep); daw-wasm-decoder = {daw-wasm-decoder, daw-io}. So (a) daw-core: no wasm package. (b) an in-src test module is hashed: daw-dsp AND scoring go stale. (c) a .nam file is not a .rs file: no package goes stale. (d) daw-wasm-decoder goes stale. Fix = rebuild those packages, run wasm:manifest, then wasm:verify.",
+      "flaws": "Saying test edits inside src/ do not move the hash; forgetting scoring depends on daw-dsp; saying daw-core feeds a wasm package; saying the fixture edit changes the hash.",
+      "evidence": "scripts/wasm-artifacts.ts:245-256 (collectRustSources .rs only), 276-299 (pathDepClosure), 415-470 (hashCrateClosure; tests/benches excluded), 131-230 (four packages); crates/scoring/Cargo.toml:15; crates/daw-wasm-decoder/Cargo.toml:15; crates/daw-dsp/Cargo.toml (no path deps)."
+    },
+    "source": "Wasm freshness fingerprint vs AGENTS.md wording."
+  },
+  {
+    "id": "bulletproof-12",
+    "repo": "sd",
+    "at": null,
+    "paths": null,
+    "tools": [],
+    "request": "Quick one on pnpm guard: extended gives more memory than focused, yeah? I'm planning `pnpm guard --profile extended -- cargo test -p daw-dsp` instead of `pnpm guard --profile focused -- pnpm cargo:test --package daw-dsp` because the focused one got RSS-killed.",
+    "key": {
+      "correct": "No. All three profiles share the same 4 GiB maxRss; they differ only in timeout (focused 10 min, broad 30, extended 60). The default ceiling is max(profile ceiling, measured budget for the pnpm script name), and measured budgets only apply when the command is pnpm and the first non-option argument names a recorded script: `pnpm cargo:test` gets 5632 MiB, while a bare `cargo test` is not a pnpm script and gets only 4096 MiB under any profile. So the proposed switch lowers the budget. The right fix is --max-rss-mib above the observed peak (an explicit value overrides the default entirely) or recording a budget in measuredScriptBudgets.",
+      "flaws": "Saying extended/broad raise the memory ceiling; missing the pnpm-script keying of budgets; not noting that bare cargo gets the 4 GiB floor.",
+      "evidence": "scripts/resourceGuard.ts:143-147 (profiles), 150-173 (measuredScriptBudgets, cargo:test 5632 MiB), 175-225 (pnpmScriptName, resolveDefaultMaxRssBytes), 1932-1934 (explicit maxRssBytes wins), 3054-3061."
+    },
+    "source": "Resource guard implementation."
+  },
+  {
+    "id": "bulletproof-13",
+    "repo": "sd",
+    "at": null,
+    "paths": null,
+    "tools": [],
+    "request": "Which of these single-file PRs skip browser execution in the PR scope plan, and which profile do they get? (a) docs/manual/devices/13-bacteria.md (b) docs/manual/coverage-exceptions.json (c) src/app/AGENTS.md (d) public/legal/THIRD-PARTY-NOTICES.md (e) crates/daw-dsp/src/lib.rs (f) root README.md. My assumption: anything under docs/ or any .md is docs-only.",
+    "key": {
+      "correct": "(a) documentation (isDocumentation: .md under docs/, .agents/ or at root) -> no browser, profile docs. (b) not documentation (isDocumentation requires .md) and not repository tooling -> product route -> browser execution selected (and smoke). (c) agent guidance under src/ -> repository tooling -> no browser, broad non-browser validation (not docs). (d) Markdown under public/ is excluded from both documentation and repository tooling -> product route -> browser execution. (e) Rust compiler input -> repository tooling -> no browser, broad non-browser. (f) root .md -> documentation, profile docs. So the assumption fails for (b), (c), (d).",
+      "flaws": "Calling (b) docs because it is under docs/; calling (d) docs because it is Markdown; calling (c) docs-only rather than broad tooling; saying (e) selects browser.",
+      "evidence": "scripts/prValidationScope.ts:122-124 (isDocumentation), 365-418 (selectValidationPlan), 343-348 (planProfile); scripts/repositoryToolingPaths.ts:1-22 (agent guidance, Rust inputs), 66-79 (isRepositoryTooling, .md exclusion for src/public/tests)."
+    },
+    "source": "PR validation scope classifier."
+  },
+  {
+    "id": "bulletproof-14",
+    "repo": "sd",
+    "at": "7115fe4389",
+    "paths": [
+      "src"
+    ],
+    "tools": [],
+    "request": "Release note for #6212 says every reader of a factory sample's buffer now obtains it on demand. Before I ship that line: does that cover everything that reads factory sample audio — library preview, timeline drop, and the agent's catalog audition/apply?",
+    "key": {
+      "correct": "No. Preview (SampleLibrary LibraryBrowser.tsx:250) and timeline drop (Arrangement useTimelineFileDrop.ts:304) call ensureFactorySampleBuffer. The agent path does not: AiRuntime auditionAgentCatalogCandidate calls SampleLibrary resolveAgentCatalogCandidate, which reads a File through resolveDroppedSampleFile; the factory root is a 'browser'-provider shim with rootRef '' and no handle (seedFactoryLibrary.ts ensureFactoryRoot), so resolveDroppedSampleFile returns unresolved and the candidate is rejected 'file-unavailable' (decode never runs). Agent audition/apply of factory samples is therefore broken in this tree; the 'every reader' wording is false.",
+      "flaws": "Accepting 'every reader'; checking only preview and drop; claiming the agent path decodes from a cache.",
+      "evidence": "At 7115fe4389: src/modules/SampleLibrary/useCases/resolveAgentCatalogCandidate.ts:36-63; resolveDroppedSampleFile.ts:42-75; seedFactoryLibrary.ts:17-38; src/modules/AiRuntime/useCases/agentCatalogAudition/auditionAgentCatalogCandidate.ts:48-55; git grep ensureFactorySampleBuffer (only LibraryBrowser and useTimelineFileDrop). Fixed later by cd89f8b639 (#6222)."
+    },
+    "source": "#6212 body vs code before #6222."
+  },
+  {
+    "id": "bulletproof-15",
+    "repo": "sd",
+    "at": null,
+    "paths": null,
+    "tools": [],
+    "request": "Manual tempo section draft: 'Sourdaw accepts tempos from 20 to 300 BPM everywhere; DAWproject imports outside that range are clamped.' Check it.",
+    "key": {
+      "correct": "Wrong in two ways. The base transport tempo is 20-300 (MIN_TEMPO/MAX_TEMPO in Transport stores/transportStore.ts:15-16), but tempo-map changes allow 20-999 (MIN_TEMPO_MAP_TEMPO/MAX_TEMPO_MAP_TEMPO, models/TempoMap.ts:34-35); assertTempoWriteBpm picks the range by whether a tempo change is targeted, and the tempo field widens to 20-999 when a map change governs the beat. DAWproject import does not clamp: a base tempo outside 20-300 is replaced with the default 120 (consumerTempo, parseProjectXml.ts:329-334), and tempo automation points outside 20-999 are dropped (parseTempoAutomation, ~961-962). Sample-library BPM metadata uses yet another range, 20-400 (SampleLibrary models/LibraryTypes.ts:103-104).",
+      "flaws": "Confirming 20-300 everywhere; saying imports clamp; missing the 999 tempo-map ceiling.",
+      "evidence": "src/modules/Transport/stores/transportStore.ts:15-16,124; src/modules/Transport/models/TempoMap.ts:34-35; src/modules/Transport/useCases/assertTempoWriteBpm.ts; src/modules/Transport/useCases/transportQueries/resolveTempoFieldState.ts:88-93; src/modules/DawInterchange/useCases/parseProjectXml.ts:48-49,329-334,954-967; src/utils/tempoDefaults.ts:2."
+    },
+    "source": "Tempo bounds across modules."
+  },
+  {
+    "id": "bulletproof-16",
+    "repo": "sd",
+    "at": null,
+    "paths": null,
+    "tools": [],
+    "request": "Desktop manual line: 'Double-click a .sdaw project (or a .mid/.wav) in Finder or Explorer and Sourdaw opens it.' True for the current desktop build?",
+    "key": {
+      "correct": "No. The user project file is .sourdaw (PROJECT_FILE_EXTENSION in Project models/ProjectData.ts:917; save/import dialogs filter 'sourdaw'); .sdaw is the CRDT binary bundle format. electron-builder.yml registers file associations only for mac (extendInfo CFBundleDocumentTypes: sourdaw as Owner; mid/midi and wav/mp3/flac/ogg/aiff as Alternate); win and linux define no fileAssociations. Even on mac the main process has no 'open-file' handler, and the 'second-instance' handler ignores argv and only restores/focuses the window, so a double-clicked file launches or focuses the app but is not opened.",
+      "flaws": "Accepting .sdaw as the project extension; claiming Windows/Linux associations; claiming the file opens because associations are declared.",
+      "evidence": "electron-builder.yml (mac.extendInfo CFBundleDocumentTypes ~lines 118-156; win/linux blocks with no fileAssociations); src/modules/Project/models/ProjectData.ts:917; src/modules/Project/repositories/project/downloadProjectFile.ts:39; electron/main.ts:199-215; grep -rn open-file electron (none)."
+    },
+    "source": "Packaging config vs Electron main."
+  },
+  {
+    "id": "bulletproof-17",
+    "repo": "sd",
+    "at": null,
+    "paths": null,
+    "tools": [],
+    "request": "Tester wants to try collaboration through the WebSocket relay in server/ (docs/architecture/06-crdt-collaboration.md lists it as one of three transports). How do they point the app at the relay?",
+    "key": {
+      "correct": "They can't: the app has no relay client. No non-test file under src/ or electron/ constructs a WebSocket; Collaboration ships only manual WebRTC offer/answer (peerConnection.ts, generateInvite.ts/acceptAnswer.ts) and the native LAN path via collab_* commands; the crates contain no websocket client either. The relay exists only as server/collab-server.ts (ws, default PORT 8787, requires a 32-128 char base64url COLLAB_AUTH_TOKEN, message types join/leave/action/cursor/sync-request/sync-response/state-update); references in the app are comments (CollaborationTypes.ts:63, generateInvite.ts:34-36) and a relay sessionSecret carried in invites. The doc's 'three transports' overstates what the app can use.",
+      "flaws": "Giving connection steps or a config key; assuming the invite's relay capability means a relay transport exists.",
+      "evidence": "grep -rn 'WebSocket' src electron (only comments in src/utils/HMR/createHmrPersistentState.ts, Collaboration/models/CollaborationTypes.ts:63, generateInvite.ts:36); server/collab-server.ts:33-39,90-93,154; docs/architecture/06-crdt-collaboration.md section 4."
+    },
+    "source": "Collaboration doc vs code."
+  },
+  {
+    "id": "bulletproof-18",
+    "repo": "sd",
+    "at": null,
+    "paths": null,
+    "tools": [],
+    "request": "`pnpm test:run` has the zero-test guard, so a spec whose tests have no expect() calls, or a file where every case is it.skip, will fail the run — right? I'm relying on it instead of reviewing a new spec closely.",
+    "key": {
+      "correct": "No. scripts/runVitestZeroTestGuard.ts reads Vitest's JSON report, where assertionResults are test cases, not expect() calls. It fails only when a file has status 'passed' with zero test cases (silentZeroCollectedFiles) or when the whole run has zero executed (non-skipped/todo) cases (silentZeroExecutedAssertions). A test with no expect() passes. A file whose cases are all skipped still passes when any other file in the run executes a case. No lint rule requires assertions (no vitest/jest plugin; oxlint plugins are typescript, unicorn, jsx-a11y, import, promise), and setupTests does not call expect.hasAssertions.",
+      "flaws": "Saying the guard catches expect-less tests; saying a single all-skipped file fails a multi-file run.",
+      "evidence": "scripts/runVitestZeroTestGuard.ts:35-70; scripts/vitestZeroTestReport.ts:43-82; .oxlintrc.json:9; eslint.config.mjs (no vitest plugin); src/setupTests.ts."
+    },
+    "source": "Zero-test guard semantics."
+  },
+  {
+    "id": "bulletproof-19",
+    "repo": "sd",
+    "at": null,
+    "paths": null,
+    "tools": [],
+    "request": "Planning the first release. Range since 0.1.0 has a `feat(ai)!: ...`, a `revert!: ...`, a fix whose body has a BREAKING CHANGE footer, and some fixes and chores. docs/release.md says a ! on any type is breaking. What version does release:propose land on?",
+    "key": {
+      "correct": "0.2.0. There is no vX.Y.Z tag yet, so the baseline is package.json 0.1.0. Increments come from PR titles only (footers never count). titleIncrement returns none for any title whose type is outside CONVENTIONAL_TYPES (build, chore, ci, docs, feat, fix, perf, refactor, test), so `revert!:` (and `style!:`) asks for nothing despite the '!' and lands under 'Other changes'; the doc's 'a ! on any type' is wrong for those. feat(ai)! is breaking -> 'major', but while major is 0 both breaking and feat take the minor position, so 0.1.0 -> 0.2.0; automation never emits 1.0.0. With only fixes it would be 0.1.1.",
+      "flaws": "Answering 1.0.0; counting revert! or the footer as breaking; using a tag baseline that does not exist.",
+      "evidence": "scripts/releaseVersion.ts:17-22 (CONVENTIONAL_TYPES), 30, 86-112 (parse/titleIncrement), 116-147 (aggregate/nextVersion); package.json:4 (0.1.0); git tag (no v tags); docs/release.md 'Semantic version' section."
+    },
+    "source": "Release version logic vs docs/release.md."
+  },
+  {
+    "id": "bulletproof-20",
+    "repo": "sd",
+    "at": null,
+    "paths": null,
+    "tools": [],
+    "request": "Which of these actually run in CI anywhere (push, Gate or nightly): deps:unused (knip), test:coverage, test:barrel-mocks, test:project-license, test:lgpl-runtime(:online), test:electron-runtime(:online), census:ui? I want to delete the local-only ones from the checklist.",
+    "key": {
+      "correct": "knip/deps:unused: never (no workflow or script invokes it; knip.json is only classified as static-analysis config). test:coverage: never (nightly's e2e-coverage job is a Playwright coverage map that gates nothing). census:ui: never. test:barrel-mocks: yes, validation.yml static job (skipped for the tooling profile) and nightly. Project license, LGPL runtime and Electron runtime provenance run indirectly in their offline form: test:release-inventory (validation static job on every push and gate, plus nightly) calls checkProjectLicense as its preflight and checkElectronRuntimeProvenance/checkLgplRuntimeProvenance unconditionally. The :online variants never run in CI.",
+      "flaws": "Saying knip or coverage run in CI; saying the license/provenance checks never run because their package scripts are not in workflows; saying :online variants run.",
+      "evidence": "grep of .github/workflows for each name; scripts/checkReleaseInventory.ts:31-34,3215-3222,3281,3289; validation.yml:382-391; nightly.yml:119,745-748; scripts/repositoryToolingPaths.ts STATIC_ANALYSIS_CONFIG."
+    },
+    "source": "package.json scripts vs workflow invocations."
+  },
+  {
+    "id": "bulletproof-21",
+    "repo": "sd",
+    "at": null,
+    "paths": null,
+    "tools": [],
+    "request": "In validation.yml's decide job: when is `heavy` true, and is smoke decided by the e2e path filter? Also does the docs/tooling narrowing apply in the admitted full run or only on push?",
+    "key": {
+      "correct": "heavy is true only when the event is pull_request_review (validation.yml:257); both callers (pr-checks.yml on pull_request opened/synchronize/..., health-gates.yml on pull_request labeled) are pull_request events, so heavy is always false from validation (nightly computes its own). The e2e output is overwritten with inputs.browser (`e2e=$BROWSER`, line 268) after the filter and the UNCLASSIFIED override, so the path filter never decides smoke; the scope planner's browser flag does. The docs/tooling narrowing is gated on EVENT == pull_request (line 270), which holds for both callers, so it applies in both preliminary and full runs (and it refuses a narrow profile with browser=true).",
+      "flaws": "Saying heavy is true for the admitted/labeled run; saying the e2e filter output drives smoke; saying narrowing only applies on push.",
+      "evidence": ".github/workflows/validation.yml:223-300 (esp. 257, 262-268, 270-283); pr-checks.yml:7-9; health-gates.yml:12-14; nightly.yml:38-49."
+    },
+    "source": "Validation scope resolution script."
+  },
+  {
+    "id": "bulletproof-22",
+    "repo": "sd",
+    "at": null,
+    "paths": null,
+    "tools": [],
+    "request": "We get monthly Dependabot PRs for npm and cargo, right? I want to drop the manual dependency-bump reminder.",
+    "key": {
+      "correct": "No. .github/dependabot.yml sets open-pull-requests-limit: 0 for both the npm and cargo entries, which disables version-update PRs despite the monthly schedule; there is no github-actions ecosystem entry. #5415 (c24b6051d4) made this change because package.json, pnpm-lock.yaml, Cargo.lock and Cargo.toml are pinned in release/dependency-license-proofs.json and release/open-source-inventory.json and Dependabot cannot run `pnpm release:restamp`. Security updates are not governed by that limit (repository setting), but any lockfile change still needs a restamp to pass release inventory.",
+      "flaws": "Reading 'interval: monthly' as active PRs; missing the limit 0; claiming actions pins are updated.",
+      "evidence": ".github/dependabot.yml; git show c24b6051d4; release/open-source-inventory.json (pnpm-lock.yaml/Cargo.lock entries ~56-95); release/dependency-license-proofs.json:63."
+    },
+    "source": "Dependabot config and its history."
+  },
+  {
+    "id": "bulletproof-23",
+    "repo": "sd",
+    "at": null,
+    "paths": null,
+    "tools": [],
+    "request": "After #6230 'WorkspaceShell leaves the cycle'. Can I say nothing below the shell tier depends on WorkspaceShell any more?",
+    "key": {
+      "correct": "No. The module-cycle row no longer lists WorkspaceShell, but the module-tier baseline still records AiRuntime->WorkspaceShell and CommandInterface->WorkspaceShell (and CommandInterface->Onboarding); AiRuntime's non-presentation use cases import it (getProjectContext.ts:22, aiPanelActions/openAnswerInChat.ts:2-3, aiPanelActions/toggleChat.ts:1). The tier gate also excludes presentation code on either end (check-dependency-boundaries.mjs:1747-1753, 1821), so lower-tier presentations import WorkspaceShell without any baseline row: Command (kernel) UndoHistoryPanel.tsx:13-14, Arrangement (core) TrackListView.tsx:33, useTimelineInteractions.ts:8-9, ClipContextMenu.tsx:13, TimelineSurface.tsx:7, Project RecentProjectsMenu.tsx:28, plus Collaboration, MixerConsole and TimelineEditor presentations.",
+      "flaws": "Equating 'left the cycle' with 'no lower-tier dependents'; missing the AiRuntime rows; missing the presentation exemption.",
+      "evidence": ".dependency-cruiser-known-violations-module-tiers.json; .dependency-cruiser.module-tiers.cjs (shell tier); scripts/check-dependency-boundaries.mjs:1740-1830; import lines cited; git show 95128133a2 --stat."
+    },
+    "source": "#6230 body vs baseline and gate semantics."
+  },
+  {
+    "id": "bulletproof-24",
+    "repo": "sd",
+    "at": null,
+    "paths": null,
+    "tools": [],
+    "request": "User asked whether undo survives a reload. My answer: 'Yes, the full undo history is saved with the project and restored on reload.' Correct it if needed.",
+    "key": {
+      "correct": "Mostly wrong. Undo is mirrored to sessionStorage (key sourdaw-undo-session), not saved with the project: it is per tab, lost when the tab/window or app session closes, and restored only when the stored project id and document witness match. At most 100 entries per stack are mirrored (MAX_UNDO_PERSIST), halved repeatedly on quota failure and removed if none fit. Callback entries (pushUndoEntry: e.g. clip split, delete time range, MIDI import, inline note moves, bounce) have no serializable form, so the mirror keeps only the unbroken run of serializable entries nearest the present and everything older than the first callback entry is lost after reload; groups are kept or dropped whole.",
+      "flaws": "Saying undo is persisted in the project or localStorage; saying the full history survives; missing the callback-entry cutoff or the 100 cap.",
+      "evidence": "src/modules/Command/stores/undoSessionMirror.ts:5-6, 285-320, 383-402, 404-440; src/modules/Command/useCases/pushUndoEntry.ts:14-26; src/modules/Command/useCases/createCallbackUndoEntry.ts:21; src/modules/Arrangement/useCases/clipEditing/splitClipWithUndo.ts:90; deleteTimeRange.ts:23; importMidiFile.ts:238; docs/architecture/06-crdt-collaboration.md §1; src/modules/Command/useCases/reconcileSessionUndoForProject.ts:7-20."
+    },
+    "source": "Undo session mirror."
+  },
+  {
+    "id": "bulletproof-25",
+    "repo": "sk",
+    "at": null,
+    "paths": null,
+    "tools": [],
+    "request": "AGENTS.md says untitled inline links only, reference-style and angle-bracket links are rejected. Does lint enforce that inside SKILL.md files? Deciding whether reviewers still need to check links by hand.",
+    "key": {
+      "correct": "Not inside SKILL.md. The reference-style/angle-bracket check (pattern `\\]\\[[^]]*\\]|^[[:space:]]*\\[[^]]+\\]:|\\]\\(<`) runs only over README.md, AGENTS.md and top-level docs/*.md. SKILL.md files only get the relative-link check `\\]\\([^)#:]*\\)`, so `[a][ref]` and `[ref]: https://...` pass in a skill, `[a](<https://x>)` passes (the colon exempts it), a relative link with a fragment like `[a](./other.md#x)` passes, and anchor-only links pass. Link titles ('untitled') are not checked anywhere. Relative links without # or : are rejected in skills.",
+      "flaws": "Saying lint rejects reference-style links in skills; missing the fragment escape; claiming titles are checked.",
+      "evidence": "scripts/lint.sh (per-skill relative-link grep; final 'Links' loop over README.md, AGENTS.md, docs/*.md)."
+    },
+    "source": "Skills repo lint vs AGENTS.md edit contract."
+  },
+  {
+    "id": "bulletproof-26",
+    "repo": "sk",
+    "at": null,
+    "paths": null,
+    "tools": [],
+    "request": "Does scripts/test-lint.sh prove every failure path in lint.sh still bites? If so I'll drop the manual lint checklist.",
+    "key": {
+      "correct": "No. test-lint has 17 mutations. Failure paths with no mutation: '<name> has a relative link' (SKILL.md relative links); 'reference-style or angle-bracket link in <doc>'; 'skills/ is empty'; 'missing <file>' (a skill folder with no SKILL.md); the README label-mismatch branch; and several invalid-frontmatter conditions (name not equal to folder, description not starting with a letter, ' #' in description, duplicate name/description keys, unclosed frontmatter, more than one invocation line). The 'angle-bracket' mutation tests '<tags>' in the description (invalid frontmatter), not angle-bracket links. The thinker list is exercised by one word (Premortem).",
+      "flaws": "Saying all lint checks are covered; reading the 'angle-bracket' mutation as covering links; missing the relative-link and reference-style gaps.",
+      "evidence": "scripts/test-lint.sh (case list and mutations); scripts/lint.sh (every fail call)."
+    },
+    "source": "Lint mutation suite vs lint script."
+  },
+  {
+    "id": "bulletproof-27",
+    "repo": "sk",
+    "at": null,
+    "paths": null,
+    "tools": [],
+    "request": "Before I edit some skill text: which of these does lint reject in a SKILL.md — Socratic, steelmen, steelmanning, devil’s advocate (curly apostrophe), devils advocate, pre-mortem, red team, Occam's razor, five whys, Stoicism, Hegelian, Kantian, Mill's methods, Popperian? And does the same ban apply to README and docs/sources.md?",
+    "key": {
+      "correct": "Rejected: Socratic, steelmanning, devils advocate (apostrophe optional, straight only), pre-mortem, Kantian, Mill's methods, Popperian. Pass: steelmen (regex needs steelman/-ning/-ned), devil’s advocate with a curly apostrophe, red team, Occam's razor, five whys, Stoicism (stoics? followed by a letter fails the boundary), Hegelian (hegel followed by a letter). The check is case-insensitive and runs only on skills/*/SKILL.md, not README.md or docs/*.md.",
+      "flaws": "Treating the ban as semantic; marking steelmen, Stoicism, Hegelian or the curly-apostrophe form as rejected; saying it also covers README/docs.",
+      "evidence": "scripts/lint.sh thinker grep in the per-skill loop (grep -Eiq on $file only)."
+    },
+    "source": "Thinker-name regex."
+  },
+  {
+    "id": "bulletproof-28",
+    "repo": "sk",
+    "at": null,
+    "paths": null,
+    "tools": [],
+    "request": "README says micro skills set disable-model-invocation: true, ship agents/openai.yaml, and say 'Use only when the user asks'. Does lint guarantee all three for every skill in the Micro table?",
+    "key": {
+      "correct": "No. Lint never reads which README table a skill sits in: the catalog check only collects `| [`x`](./skills/x/SKILL.md)` rows from both tables and compares them to the folders. The openai.yaml requirement fires only if the SKILL.md contains a line exactly 'disable-model-invocation: true' (grep -qx, anywhere in the file); a micro skill that omits the key or sets false passes as long as it has no agents/ dir. The phrase 'Use only when the user asks' is not checked at all. What is enforced: when the line is present the yaml must be exactly 'policy:\\n  allow_implicit_invocation: false', and an agents/ dir without the line fails.",
+      "flaws": "Saying lint maps README Micro rows to frontmatter; saying the Gemini phrase is linted; missing that the grep is file-wide.",
+      "evidence": "scripts/lint.sh (catalog sed/awk; grep -qx 'disable-model-invocation: true'; yaml comparison; frontmatter awk allowing true|false); README.md Micro section."
+    },
+    "source": "Skills README claims vs lint."
+  },
+  {
+    "id": "bulletproof-29",
+    "repo": "sk",
+    "at": null,
+    "paths": null,
+    "tools": [],
+    "request": "I want to write 'drill into the failing test first' and 'a proper fix, not a workaround' in the bulletproof skill, plus 'use the scout's report'. Lint fine with that?",
+    "key": {
+      "correct": "No, all three fail. Lint rejects any case-insensitive whole-word occurrence of another skill's folder name anywhere in a SKILL.md ('names sibling skill'), with word boundaries that exclude letters, digits and hyphens. drill, proper and scout are sibling skill folders, so 'drill into', 'a proper fix' and 'scout's' (the apostrophe is a boundary) all fail. Variants that pass: 'properly', 'improper', 'drill-down', 'settled'. The self-name check applies only to the description.",
+      "flaws": "Assuming the sibling check only matches skill references or backticked names; saying 'scout's' passes; missing that proper is a skill.",
+      "evidence": "scripts/lint.sh sibling loop `(^|[^[:alnum:]-])$other([^[:alnum:]-]|$)` with grep -Eqi; ls skills/ (drill, proper, scout, ...)."
+    },
+    "source": "Sibling-name lint vs ordinary prose."
+  },
+  {
+    "id": "bulletproof-30",
+    "repo": "sd",
+    "at": null,
+    "paths": null,
+    "tools": [],
+    "request": "If the nightly is green, prod web got deployed, and a red native macOS or collab-server leg would have blocked it — correct? Writing the ops note.",
+    "key": {
+      "correct": "Both wrong. deploy-web runs only on schedule or a workflow_dispatch on main, and its needs are static, lint, boundaries, unit, build, rust, e2e, browser-ai-webgpu, codeql and secrets; native-macos, native-windows, collab-server and desktop-measure are deliberately not needed, so their failures do not block the deploy. A green deploy-web does not mean a deploy: without the VERCEL_TOKEN secret every deploy step is skipped at step level and the job reports green with a 'Web deploy gated off' notice; with the token it can also skip as 'serving' (production already serves the SHA) or 'stale' (production serves a newer revision). Reaching main deploys nothing because vercel.json disables Git deployments.",
+      "flaws": "Equating green with deployed; saying native or collab-server failures block deploy.",
+      "evidence": ".github/workflows/nightly.yml:965-1060 (needs, if, env DEPLOY_CREDENTIAL_PRESENT), 1079-1089, 1120-1145; vercel.json git.deploymentEnabled."
+    },
+    "source": "Nightly deploy job."
+  },
+  {
+    "id": "bulletproof-31",
+    "repo": "sd",
+    "at": "d3f3e0409b",
+    "paths": [
+      "src"
+    ],
+    "tools": [],
+    "request": "Agent-workspace onboarding doc needs a short 'Saving while the agent works' paragraph. My draft: \"Saving never invalidates agent work. A save only touches project metadata and the arrangement snapshot, and every agent check that compares revisions ignores those writes, so Confirm, Retry renders, render receipts, transient-onset reads and planner measurements all carry on after Cmd+S.\" Check it against the code and give me the corrected paragraph with file refs.",
+    "key": {
+      "correct": "Draft is wrong for most of its list. Only Confirm and Retry renders use the save-insensitive comparison projectRevisionMatchesLiveIgnoringSaveWrites (CrdtDocument/useCases/projectRevisionMatchesLiveIgnoringSaveWrites.ts), which ignores projectMeta.updatedAt and the active arrangement's snapshot copy. Four agent paths still use the strict projectRevisionMatchesLiveIgnoringCommandCheckpoint (CrdtDocument/useCases/projectRevisionMatchesLiveIgnoringCommandCheckpoint.ts:190), which a save's writes break, so after a save they refuse as stale: transient-onset reads (AiRuntime/useCases/executeTransientOnsetRead.ts:123), render-receipt admission (Arrangement/useCases/freezeBounce/admitAgentRenderReceipt.ts:96), planner measurement targets (AudioRendering/useCases/renderAgentMeasurementTargets.ts:141,163) and preview measurement scope (AudioRendering/useCases/renderAgentPreviewMeasurementScope.ts:217). Corrected paragraph: Confirm and Retry survive a save; receipts, onset reads and measurements taken before a save must be re-run.",
+      "flaws": "Accepting 'every agent check'; generalising from the #6151/#6163 titles or the save-insensitive helper's name to all agent paths; listing receipts, onset reads or measurements as surviving a save.",
+      "evidence": "At d3f3e0409b: the four call sites above vs the save-insensitive helper used by Confirm/Retry. All four were switched later by 31296067ef (#6192, 'let render receipts, transient reads and measurements survive a save')."
+    },
+    "source": "Time travel to after #6163, before #6192."
+  },
+  {
+    "id": "bulletproof-32",
+    "repo": "sd",
+    "at": null,
+    "paths": null,
+    "tools": [],
+    "request": "Onboarding paragraph for the review flow, going into the agent handbook: \"Reviewer stances run on economy or standard tier; publication refuses Opus, Fable, Astra or Sol reviewers and checks both the summary reviewerModel and every draw against that ceiling. Stance floors: docs-only needs 1, small needs 2, everything else 3. Five request-changes rounds freeze the PR. Resolve threads with pnpm review:resolve. An APPROVE must carry no inline comments.\" Fix whatever's wrong; cite code.",
+    "key": {
+      "correct": "Three sentences are wrong. (1) No model name is refused: since #6132 assertReviewModelEligible ignores the model and only refuses a tier other than economy/standard, and a draw with no tier passes (scripts/reviewerModelDiversity.ts:41-45). The Opus/Fable/Astra/Sol ban survives only as prose in AGENTS.md:102-105. (2) The summary reviewerModel is not checked against any ceiling: it must be present and is used for author-diversity (reviewerModelDiversity.ts:55-79); only draws go through assertReviewModelEligible (line 63; scripts/reviewStructuralAdmission.ts:38). AGENTS.md:178-181 ('checks the summary reviewer model and each draw against the cost ceiling') is stale. (3) review:resolve is retired (scripts/resolveThread.ts:6). Also 'everything else 3' is imprecise: docs-only and test-only 1, small 2, otherwise three or the number of stances the plan earns when it earns fewer (reviewRiskPolicy.ts:440-451). True: freeze at 5 rounds (scripts/reviewRoundEscalation.ts:19); APPROVE must carry no comments (reviewDocumentParser.ts:117).",
+      "flaws": "Repeating the model ban or summary-model check from AGENTS.md; keeping review:resolve; stating a flat floor of 3.",
+      "evidence": "scripts/reviewerModelDiversity.ts:41-45,55-79; scripts/reviewStructuralAdmission.ts:38; git show 6259499185 (removed LOW_COST_REVIEW_MODEL regex and the summary-model call); AGENTS.md:102-105,178-181; reviewRiskPolicy.ts:440-451; reviewRoundEscalation.ts:19; resolveThread.ts:6; reviewDocumentParser.ts:117."
+    },
+    "source": "#6132 vs stale AGENTS.md."
+  },
+  {
+    "id": "bulletproof-33",
+    "repo": "sd",
+    "at": null,
+    "paths": null,
+    "tools": [],
+    "request": "Writing the BrowserAi section of the architecture overview from src/modules/BrowserAi/AGENTS.md. Planned bullets: inference runs in inference.worker.ts and model storage in modelStorage.worker.ts; we ship DDSP, Kokoro, DiffSinger singing and RAVE; renderQueueStore caches rendered phrase audio by content hash; the phrase cache key hashes pitch, velocity, timing and phonemes; WebGPU models fall back to WASM when WebGPU is missing. Verify each bullet and give me the corrected list.",
+    "key": {
+      "correct": "Every bullet needs correcting. Workers: workers/onnxInferenceWorker.ts and tfjsInferenceWorker.ts (repositories/inferenceWorkerBridge.ts:234,258), workers/modelStorageWorker.ts (modelStorageWorkerBridge.ts:89), plus workers/webGpuProbeWorker.ts (probeWebGpuUsability.ts:27); the named files do not exist. Shipped: DDSP and Kokoro (admitted; src/infra/release/modelReleaseAdmission.ts). DiffSinger singing is unavailable: renderDiffSingerPhrase throws 'Singing synthesis is unavailable until a compatible vocoder is admitted.' (useCases/renderDiffSingerPhrase.ts:22-24), even though the worker pipeline and a UI caller exist (TimelineEditor .../ClipMidiAiSection.tsx:556). RAVE is not shipped (MODEL_RELEASE_ADMISSION.rave false; stores/rave.ts:4-10). renderQueueStore holds only queue entries, statuses, cachedPhraseIds and source fingerprints (stores/renderQueueStore.ts:11-38); PCM lives in the OPFS render cache (repositories/renderCacheStorage.ts, readRenderCache/writeRenderCache). Cache key = SHA-256 of modelId:qualityParams:seed plus inputData (computeRenderCacheKey.ts:11-20); DDSP inputData is the conditioned f0 and loudness curves with session key and frame/sample counts (useCases/renderDdspInstrument.ts:177-190), Kokoro's is text:speaker:speed[:duration] (renderKokoroTts.ts:164-176); no phonemes. DDSP has no WASM fallback: it throws 'DDSP requires WebGPU' (renderDdspInstrument.ts:173-175). docs/architecture/09-ai-stack.md is the accurate source.",
+      "flaws": "Copying the module AGENTS.md; counting DiffSinger as working because a worker pipeline and UI exist; assuming RAVE ships because a store and handlers exist; putting audio in renderQueueStore; keeping phonemes or the WASM fallback.",
+      "evidence": "Files cited above at 95128133a2; src/modules/BrowserAi/AGENTS.md:11-20 (stale); src/infra/release/modelReleaseAdmission.ts:1-9."
+    },
+    "source": "Stale module AGENTS.md vs code."
+  },
+  {
+    "id": "bulletproof-34",
+    "repo": "sd",
+    "at": null,
+    "paths": null,
+    "tools": [],
+    "request": "New-contributor tour of AudioAnalysis, based on its AGENTS.md. Bullets: levels and frequency balance live in services/readLevels.ts and readFrequencyBalance.ts and run on decoded PCM, never the live graph; stem separation calls the local Audio AI server once isStemSeparationAvailable confirms it's reachable; isAudioAiServerRunning pings that server; the stemSeparate handler lives in AudioAnalysis/handlers; the handlers cover analyze mix, audio-to-MIDI, auto-fix mix, compare to reference, detect key and detect tempo. Check and correct, with refs.",
+    "key": {
+      "correct": "Only the handler list is right. readLevels and readFrequencyBalance are functions in services/mixAnalysisHelpers.ts:38,90 (only spec files carry those names) and they read a live AnalyserNode: analyzeMix takes getMasterAnalyser and track strips from AudioEngine and records provenance 'live-analyser-snapshot', refusing when the AudioContext is not running (useCases/analyzeMix.ts:1-12,46-60). Stem separation is switched off: isStemSeparationAvailable returns MODEL_RELEASE_ADMISSION.stemSeparation, which is false (repositories/isStemSeparationAvailable.ts:3-5; src/infra/release/modelReleaseAdmission.ts:6), and separateStems always throws 'Stem separation is unavailable until a compatible model is admitted.' (repositories/separateStems.ts:3-5); no server is called. isAudioAiServerRunning just returns isDesktopRuntime() (repositories/isAudioAiServerRunning.ts:4-6). The stemSeparate handler is AiGeneration/handlers/aiMidi/handleStemSeparate.ts and refuses up front. Handlers in AudioAnalysis/handlers/analysis/ match the listed six.",
+      "flaws": "Trusting the AGENTS.md file list and 'remote server' description; claiming offline PCM analysis for the mix readers; describing a working server path.",
+      "evidence": "Files above at 95128133a2; src/modules/AudioAnalysis/AGENTS.md:15-24 (stale); git show 64259745be (removed browser stem separation)."
+    },
+    "source": "Stale module AGENTS.md vs code."
+  },
+  {
+    "id": "bulletproof-35",
+    "repo": "sd",
+    "at": null,
+    "paths": null,
+    "tools": [],
+    "request": "Release notes for this week's architecture-gate work (#6121 module tiers and cycle gate, #6127 worker spawn check, #6097 same-module exemption). Draft: \"Modules now carry tiers and the module graph is cycle-free; the gate fails any module cycle. Every Worker spawn in the repo must target a workers/ folder, and the gate reads all spawn sites. A module may now deep-import only its own internals; the old prefix match let Project reach into ProjectVersioning. The tier baseline shrank from 69 to 28 rows.\" Verify each sentence and send corrected notes.",
+    "key": {
+      "correct": "Two sentences are false. (1) The graph is not cycle-free: the tier baseline grandfathers one module-cycle row of 14 modules (Arrangement, AudioEngine, Automation, Collaboration, Command, ControlSurface, CrdtDocument, ElasticAudio, Knead, MIDI, Project, Routing, SampleLibrary, Transport) in .dependency-cruiser-known-violations-module-tiers.json. The gate fails only rows that differ from that baseline, NEW or STALE (scripts/check-dependency-boundaries.mjs:1911-1934 computes cycles, validateGate 2254-2266 compares exact rows), so a new or changed cycle fails and the recorded one passes. (2) The spawn check is not repository-wide. It walks src/ only (buildStaticGuardState 2099-2121, sourceFiles) and skips __tests__/ and testing/ (1966, 2016-2018). '?worker&url' worklet imports are deliberately not spawns (1959-1960). electron/shutdown.ts:74 (node worker_threads eval Worker) and scripts/ spawns are unchecked. The spawn baseline is empty. True: the #6097 trailing-slash fix (.dependency-cruiser.cjs:140,225) and 69 to 28 rows (69 at 538e4796ad: 68 tier rows plus 1 cycle; now 27 plus 1).",
+      "flaws": "Echoing 'cycle-free' or 'every spawn site' from titles and PR bodies without opening the baseline and the walk roots.",
+      "evidence": "Baseline JSON at HEAD and at 538e4796ad; scripts/check-dependency-boundaries.mjs lines above; electron/shutdown.ts:74; .dependency-cruiser.cjs:140,225."
+    },
+    "source": "Commit titles vs gate code and baseline."
+  },
+  {
+    "id": "bulletproof-36",
+    "repo": "sd",
+    "at": "2083e324ac",
+    "paths": [
+      "src"
+    ],
+    "tools": [],
+    "request": "Help-center blurb for undo, please. My draft: \"The number in the status bar is how many times you can press Cmd+Z. Undo History shows one row per undo step, so a preset load is one row. Click any row to roll back to just after it. Cmd+Z always undoes a whole gesture.\" Check against the code and rewrite where it's wrong.",
+    "key": {
+      "correct": "Only the last sentence holds. Cmd+Z undoes a whole group: takeCandidate takes every consecutive entry sharing the head's groupId (Command/useCases/undo.ts:128-142). The status-bar count is undoStore past.length (WorkspaceShell/presentations/hooks/useUndoState.ts:25; StatusBar.tsx:413), so every entry counts, including each member of a grouped gesture and inert entries; it is not the number of Cmd+Z presses. Undo History renders one row per entry of past and future (Command/presentations/views/UndoHistoryPanel.tsx:62-117), so a multi-entry gesture shows several rows. Clicking a row inside a group undoes past it: undoToIndex's backward loop calls undo(), which consumes the whole group (useCases/undoToIndex.ts:50-80). Its header comment ('stops exactly at the target row') covers only inert entries.",
+      "flaws": "Equating the count with Cmd+Z presses; assuming the panel groups rows; trusting the undoToIndex comment.",
+      "evidence": "At 2083e324ac: files above. Fixed by edd556236c (#6140), which added UndoUnit grouping, undoStepStore and moveHistoryToStep; its PR body describes these exact symptoms."
+    },
+    "source": "Time travel to the parent of #6140."
+  },
+  {
+    "id": "bulletproof-37",
+    "repo": "sd",
+    "at": "5dec138fd2",
+    "paths": [
+      ".dependency-cruiser.cjs",
+      ".dependency-cruiser.shared.cjs",
+      "docs/architecture/03-typescript-module.md",
+      "docs/architecture/05-boundary-enforcement-limits.md",
+      "AGENTS.md"
+    ],
+    "tools": [],
+    "request": "One-pager for new contributors on module import rules. Claims: cross-module imports must hit a contract barrel (useCases, events, stores or presentations/views index); module-root index.ts barrels are refused; src/helpers is importable from any module; a module's exemption covers only its own folder; relative ../../ imports across modules are refused; src/app, components and routes also go through barrels; a contract barrel may re-export only from its own folder. Confirm each from the config.",
+    "key": {
+      "correct": "All true except the own-folder exemption. MODULE_ROOT is '^(src/modules/)([^/]+)/' (.dependency-cruiser.shared.cjs:10) and the same-module exemption is pathNot '^$1$2' with no trailing slash (.dependency-cruiser.cjs:137 in cross-module-index-only, :222 in no-relative-cross-module-imports). That is a prefix match, so Project is exempt into ProjectVersioning, Command into CommandInterface and Proof into ProofChamber: deep and relative imports between those siblings pass both rules. Other rules check out: barrel-only pathNot at :139-140 (helpers at :140), external-module-contracts-only for app/components/routes, module-index-contract-only and contract-barrel-scope (:146, :161, :180).",
+      "flaws": "Reading the comment 'same module may import its own internals' as exact; not noticing the missing trailing slash and the sibling-prefix module names.",
+      "evidence": "At 5dec138fd2: .dependency-cruiser.cjs:125-226; .dependency-cruiser.shared.cjs:10; module folders Project/ProjectVersioning, Command/CommandInterface, Proof/ProofChamber exist. Fixed by b9057a5f23 (#6097)."
+    },
+    "source": "Time travel to the parent of #6097."
+  },
+  {
+    "id": "bulletproof-38",
+    "repo": "sd",
+    "at": "724d59947b",
+    "paths": [
+      "src/modules/CommandInterface"
+    ],
+    "tools": [],
+    "request": "Writing the 'Keyboard focus' section of the manual. Draft: \"Space always toggles playback and Enter always stops it, even right after you click a toolbar button with the mouse. Shortcuts pause while you type in a field, a dropdown or a dialog, except Cmd+K. In the piano roll, keys the editor uses (Delete) stay with the editor. Shortcuts do nothing until the project finishes loading. Tab on a focused button moves focus; Tab on the arrangement switches Arrange/Clip mode.\" Verify against the code and fix the draft.",
+    "key": {
+      "correct": "The first sentence is false. A mouse-clicked button keeps focus, and the window handler returns early for unmodified Enter or Space whenever a focused HTMLButtonElement is the target (presentations/views/keyboardShortcutsContract.ts:71-82, early return at 91-92). Space re-activates the button (Loop toggles back off) and playback never starts; Enter clicks the button rather than stopping. The shortcutStore comment 'Enter: always stops transport' overclaims (stores/shortcutStore.ts:88-96). The rest holds. Text entry includes selects, editable targets and modal or menu surfaces, and only workspace.toggleCommandPalette is allowed there (keyboardShortcutsContract.ts text-entry block; handleKeydown allowedInInput). Editor-claimed keys arrive defaultPrevented and are skipped. shouldDispatchShortcutAppActions blocks while loading or after a failed load (:23-34). preservesNativeTabTraversal keeps Tab for focused buttons (:36-69), and canvas Tab reaches view.toggleWorkspaceMode (shortcutStore Tab binding).",
+      "flaws": "Trusting the 'always' wording or the store comment; missing the native-activation early return.",
+      "evidence": "At 724d59947b: files above. Fixed by 1af5f3a7be (#6219), which tracks pointer-focused buttons."
+    },
+    "source": "Time travel to the parent of #6219."
+  },
+  {
+    "id": "bulletproof-39",
+    "repo": "sd",
+    "at": null,
+    "paths": null,
+    "tools": [],
+    "request": "Release-notes entry for #6130 (project lifecycle registry). Planning: \"Project no longer writes other modules' stores; each module resets and hydrates itself through a registry composed in src/app. Project dropped its tier edges to eight device modules; only the Levain edge remains, for the string orchestra template. Project is now out of the module cycle. no-foreign-store-write is now an error, so no module can write another module's store.\" Check it against the commit and the tree, and correct it.",
+    "key": {
+      "correct": "Registry and the eight dropped edges are right: src/app/registerProjectLifecycle.ts plus Project projectLifecycleRegistry.ts, and the baseline lost Project to Bacteria, Crust, Fermenter, Gluten, GrandBoule, Grinder, Proof and Tuner. Three claims are wrong. (1) 'Only Levain remains' (the PR body's own claim) is false: after 85b14f55fa Project still had tier rows to ControlSurface, Crumbs, CvGate, Levain, SampleLibrary, Toaster, WorkspaceShell and Yeast, so Crumbs, Toaster and Yeast are device modules too. Today Project keeps ControlSurface, CvGate and SampleLibrary. (2) Project stays in the module cycle: the 22-member cycle row #6130 wrote includes Project, and Project is still in the 14-member cycle at HEAD. (3) The rule went warn to error (eslint.config.mjs:2594), but it flags only .set/.update calls on a named import (or const alias) of a store exported by another module's stores barrel (eslint.config.mjs:1895-1960). Calls to exported reset functions, other methods and namespace imports are not caught, so 'no module can write' overclaims.",
+      "flaws": "Copying the PR body's Levain sentence; inferring 'out of the cycle' from dropped edges; reading 'error' as complete enforcement.",
+      "evidence": "python diff of .dependency-cruiser-known-violations-module-tiers.json at 85b14f55fa~1 vs 85b14f55fa (9 rows removed, cycle re-recorded with Project); current baseline; eslint.config.mjs:1835-1960,2594; git show 85b14f55fa body."
+    },
+    "source": "PR body vs baseline and rule code."
+  },
+  {
+    "id": "bulletproof-40",
+    "repo": "sd",
+    "at": "d14c7dc877",
+    "paths": [
+      "vite.config.ts",
+      "src/styles/main.css",
+      "package.json",
+      ".gitignore",
+      "AGENTS.md",
+      "index.html"
+    ],
+    "tools": [],
+    "request": "Dev-loop section for the onboarding doc. Draft: \"Tailwind only scans src/ for class names. pnpm dev in the main checkout ignores edits inside agent lanes under .agents/worktrees, same as Vitest. Vitest runs 2 workers by default (VITEST_MAX_WORKERS overrides) and skips lanes, review probe trees, server/ and tests/e2e. The dev server sends COOP/COEP headers, and NO_HMR=1 turns HMR off.\" Confirm or fix from the config.",
+    "key": {
+      "correct": "The first two sentences are false. src/styles/main.css:1 is a bare \"@import 'tailwindcss';\" with no source(), so Tailwind v4's automatic detection scans every non-gitignored file in the repository: scripts, docs, tracked .agents specs and configs. Lanes are gitignored (.gitignore:25,31), so they are not scanned. The dev server has no watch ignore: the server block (vite.config.ts:136-142) holds only hmr and headers. The .agents/worktrees and .agents/review-worktrees exclusions exist only in Vitest's exclude list (vite.config.ts:170-190), so a lane edit reloads the main checkout's dev server. True: maxWorkers default 2 via VITEST_MAX_WORKERS; exclusions of server/**, lanes, review worktrees and tests/e2e/**; COOP/COEP headers; hmr off when NO_HMR=1.",
+      "flaws": "Generalising the Vitest exclusion to the dev server; assuming Tailwind scans only src.",
+      "evidence": "At d14c7dc877: files above. Fixed later by 2c2c068ac1 (#6165, source('../') plus index.html) and 8b6fb56df8 (#6215, server.watch.ignored for .agents)."
+    },
+    "source": "Time travel before #6165 and #6215."
+  },
+  {
+    "id": "bulletproof-41",
+    "repo": "sd",
+    "at": "85b14f55fa",
+    "paths": [
+      "src/modules/CommandInterface"
+    ],
+    "tools": [],
+    "request": "Cheat-sheet section for Mac users, plus the Loop Station keyboard mode. Draft: \"Option+D duplicates the clip to the next bar, Option+S clears solos, Option+I and Option+M toggle Inspector and Mixer. Arm the Loop Station and the 1-8, Q-I, A-K and Z-, rows become pads: press to play, Shift+key to record. While armed, pad keys win over normal shortcuts. Shortcuts are ignored in text fields except Cmd+K.\" Verify against the code and correct.",
+    "key": {
+      "correct": "Matching compares the produced character: the window handler passes key: event.key (presentations/views/keyboardShortcutsContract.ts:156), and matches() compares that text plus modifier flags (useCases/.../handleKeydown.ts:157-196). (1) On macOS Option changes the character (Option+D gives a different glyph), so alt+d, alt+s, alt+i and alt+m never match (stores/shortcutStore.ts:222,231,318,359). The Option shortcuts are dead; Cmd+I and Cmd+M work. (2) Shift record fails on the digit row: Shift+1 yields '!', so shift+1..8 never match, and Shift+, yields '<'. Letter-row Shift works because the comparison is case-insensitive. The comment claiming record variants 'always fire' is wrong. (3) Armed pads do not win: definitions are scanned in order and pads are appended last (shortcutStore.ts:439), so an earlier global on the same key fires instead, e.g. R = transport.toggleRecording (shortcutStore.ts:113-118). Only pad play is gated by armed; record variants fire even unarmed (handleKeydown.ts:665). True: in text entry only workspace.toggleCommandPalette passes (handleKeydown.ts:653-656).",
+      "flaws": "Assuming key matching is layout-aware; trusting the record-variant comment; assuming pads take priority when armed.",
+      "evidence": "At 85b14f55fa: files above (LOOP_STATION_PAD_ROWS at shortcutStore.ts:24-29, pad defs 55-76). Fixed by ee7d6db603 (#6186), whose body lists dead Option shortcuts, never-firing Shift+digit record keys and pad priority."
+    },
+    "source": "Time travel to the parent of #6186."
+  },
+  {
+    "id": "bulletproof-42",
+    "repo": "sd",
+    "at": "2d23cbcbd1",
+    "paths": [
+      "src/modules/Project",
+      "src/modules/WorkspaceShell",
+      "src/modules/CommandInterface/useCases/commands",
+      "src/modules/DawInterchange/useCases",
+      "electron/windowCloseDialog.ts"
+    ],
+    "tools": [],
+    "request": "Help article: 'What happens to unsaved work when I open another project'. Draft: \"Sourdaw saves the open project first. If that save fails, it warns you and continues to the new project anyway, since you asked to leave. If you'd rather drop your changes, pick Don't Save in the dialog that appears. Closing the window asks Save / Don't Save / Cancel.\" Check every claim and correct the article.",
+    "key": {
+      "correct": "The first and last sentences hold; the middle two are false. Every replacing route pre-saves through saveProjectBeforeReplacement, which returns saved && !dirty (Project/useCases/projectPersistence/saveProject/saveProjectBeforeReplacement.ts:16-19), and returns early when it is false. That means a silent refusal: the user stays in the project. Callers: CommandInterface/useCases/commands/ProjectCommands.ts:27, Project/presentations/views/RecentProjectsMenu.tsx:81,142, TemplateChooser.tsx:245, Project/useCases/projectPersistence/fileIO/pickAndImportProjectFile.ts:33, DawInterchange/useCases/pickAndImportDawProject.ts:19, WorkspaceShell/handlers/workspace/handleNewProject.ts:13, useNativeApplicationMenu.ts:61. A save that resolves still dirty (a rejected plugin capture) refuses the same way. No Don't Save dialog exists on these routes. Project/AGENTS.md:39's 'the replacement still proceeds past a failed save' is about the closed-take helper once a route has already proceeded. The window close dialog does offer Save, Don't Save and Cancel (electron/windowCloseDialog.ts:34).",
+      "flaws": "Taking the AGENTS.md sentence as the route behaviour; inventing a Don't Save dialog for project switching.",
+      "evidence": "At 2d23cbcbd1: files above. Fixed by ca4dcc95d3 (#6005, 'offer Don't Save when the pre-replacement save fails'), whose body says the routes 'silently refused'."
+    },
+    "source": "Time travel to the parent of #6005."
+  },
+  {
+    "id": "bulletproof-43",
+    "repo": "sd",
+    "at": null,
+    "paths": null,
+    "tools": [],
+    "request": "Onboarding paragraph on how PR CI picks browser specs. Draft: \"When product files change, the planner can narrow the browser run with the nightly coverage map, if the map comes from a scheduled or dispatched nightly on main and is under three days old. Any file that changed on main since the map was built forces the full suite. A type- or comment-only change selects no spec. Files a worker or audio worklet loads force the full suite. Smoke always runs.\" Check against the scripts and workflows; fix it.",
+    "key": {
+      "correct": "Two claims are wrong and one is loose. True: map age of at most three days (scripts/e2eCoverageSelection.ts:112-127), trusted source only (.github/workflows/pr-checks.yml:56-63, scripts/fetchE2eCoverageMap.ts), and worker/worklet-loaded files force full (e2eCoverageSelection.ts:444-449). False: drift on main does not by itself force full. Since #6141, drift since the map is classified like the PR's own change: body-only drift keeps the recorded specs, and only drift outside function bodies, an unavailable map version, or a file absent from the map that changed since its commit keeps full (e2eCoverageSelection.ts:335-409). #6122's description of the drift rule is outdated. False: a type- or comment-only change selects no mapped spec, but the map's alwaysSelect and every unmapped collected spec are still selected (extraSpecs 412-417, used at 455-456). Loose: smoke is removed from the narrowed set and runs separately whenever browser work is selected (e2eCoverageSelection.ts:438; docs/affected-e2e.md:3-5), not on every PR.",
+      "flaws": "Taking #6122's drift rule as current; saying comment-only edits run no specs; saying smoke runs on every PR.",
+      "evidence": "scripts/e2eCoverageSelection.ts lines above; git log -1 63007d11a5 (#6141) vs c6de36676f (#6122) bodies; pr-checks.yml:56-70."
+    },
+    "source": "Later commit changed behaviour described by an earlier PR."
+  },
+  {
+    "id": "bulletproof-44",
+    "repo": "sd",
+    "at": "6be221b662",
+    "paths": [
+      "scripts/prValidationScope.ts",
+      "scripts/prValidationScopeCheckout.ts",
+      "scripts/e2eAffectedGraph.ts",
+      "scripts/vitestCollectionPatterns.ts",
+      "docs/affected-e2e.md",
+      "AGENTS.md"
+    ],
+    "tools": [],
+    "request": "For the CI cheat sheet: which of these edits, alone in a PR, run browser specs? (a) src/modules/Transport/AGENTS.md (b) crates/daw-dsp/src/lib.rs (c) .github/workflows/nightly.yml (d) .dependency-cruiser.cjs or eslint.config.mjs (e) evidence/agent-campaign/manifest.json (f) release/open-source-inventory.json (g) docs/release.md (h) root AGENTS.md. I'm planning to write 'none of them, all tooling or docs'. Give me the per-path answer and which validation profile each gets.",
+    "key": {
+      "correct": "Not 'none'. Paths (a) through (c) and (e) select no browser specs and keep the broad non-browser profile through isRepositoryTooling (prValidationScope.ts:165-177): (a) via isAgentGuidance (:125-130), (b) via isRustCompilerInput (:138-146), (c) via isNightlyWorkflow (:149-151), (e) via isAgentCampaignEvidence (:154-156). (d) is unclassified in this tree. It falls to pathSelection and the affected graph's 'unknown or shared changed source', so it selects the full browser suite (FULL_COVERAGE_REASON :339; scripts/e2eAffectedGraph.ts:529). (f) hits isReviewTooling via RELEASE_TOOLING_METADATA (:99-102,196-202): no browser, tooling profile (security/static only), not broad. (g) and (h) take the documentation route checked first (isDocumentation :121-123; loop :428-432): no browser and no broad profile, the 'docs' profile (planProfile :396-401). Unlike (a), root AGENTS.md runs no unit or type checks.",
+      "flaws": "Answering 'none'; giving every path the same profile; missing that lint and boundary configs are unclassified here.",
+      "evidence": "At 6be221b662: lines above. (d) was moved to repository tooling by ba62564fc7 (#6159), whose body says such paths 'selected the full browser suite as an unclassified path' and that #6121 ran 134 shard-minutes of E2E."
+    },
+    "source": "Time travel to the parent of #6159."
+  },
+  {
+    "id": "bulletproof-45",
+    "repo": "sk",
+    "at": null,
+    "paths": null,
+    "tools": [],
+    "request": "Contributor note for the skills repo: which AGENTS.md rules does sh scripts/lint.sh actually enforce? My list: frontmatter shape, the openai.yaml policy file, no self-name in the description, no sibling names in a skill, no thinker or method names, no reference-style or angle-bracket links anywhere including SKILL.md, at most 10 rules per skill, no hedges or modal verbs, every skill ends with Done when, docs/sources.md updated with sourced lines, a README catalog row per skill. Mark each enforced or not, with line refs.",
+    "key": {
+      "correct": "Enforced: README catalog matches skills/ (scripts/lint.sh:14-18); frontmatter keys, name and description shape (:31-47); openai.yaml exact policy for disable-model-invocation skills and no agents/ otherwise (:49-56); description naming its own skill (:58-61); sibling names anywhere in SKILL.md (:63-68); thinker or method names through a fixed regex list (:70-73); relative links in SKILL.md (:74-76). Partly: reference-style and angle-bracket links are rejected only in README.md, AGENTS.md and docs/*.md (:79-84), not in SKILL.md. SKILL.md only rejects relative ](path) links. Not enforced: the 10-rule cap, hedges and modal verbs, a closing Done when, docs/sources.md updates (and persona lines and the trigger-eval gate). The file has no such checks.",
+      "flaws": "Assuming every AGENTS.md rule has a lint check; saying reference links are rejected in SKILL.md.",
+      "evidence": "/tmp/snap/sk scripts/lint.sh at e03ea04 (91 lines; fail sites at 17-87); AGENTS.md Authoring rules."
+    },
+    "source": "AGENTS.md rules vs lint.sh."
+  },
+  {
+    "id": "bulletproof-46",
+    "repo": "sd",
+    "at": "9f21f43adc",
+    "paths": [
+      "eslint.config.mjs",
+      "scripts/runLint.ts",
+      "src/modules/Project",
+      "AGENTS.md",
+      "docs/03-state-management.md"
+    ],
+    "tools": [],
+    "request": "Architecture note for onboarding: how we keep modules from writing each other's stores. Draft: \"Stores are written only by their owning module's use cases. A lint rule, no-foreign-store-write, enforces this and pnpm lint:full fails on any violation, so CI blocks it. Project resets and hydrates other modules by calling their use cases.\" Verify and fix with refs.",
+    "key": {
+      "correct": "All three claims fail in this tree. The rule exists (eslint.config.mjs:1835) but is set to 'warn' (:2594), and runLint passes --quiet to eslint (scripts/runLint.ts:97), which suppresses warnings. lint:full and CI therefore never fail on it. Project writes foreign stores directly: resetModuleStoresToDefault.ts imports automationStore, transportStore, tempoMapStore, timeSignatureMapStore, glutenStore, crustStore, levainStore and others from other modules' stores barrels (Project/useCases/projectPersistence/helpers/resetModuleStoresToDefault.ts:3-19) and calls .set on them (e.g. :66,68,78,79,84). Only some resets go through use cases (resetArrangementStoresForProject, resetMidiStoreForProject, setSidechainRoutes). Store-module functions like resetGrandBouleStores would escape the rule anyway, since it flags only .set/.update.",
+      "flaws": "Assuming the rule blocks CI; missing --quiet plus warn; trusting the ownership principle over Project's helper.",
+      "evidence": "At 9f21f43adc: files above. #6130 (85b14f55fa) later moved resets into a lifecycle registry and made the rule an error."
+    },
+    "source": "Time travel to the parent of #6130."
+  },
+  {
+    "id": "bulletproof-47",
+    "repo": "sd",
+    "at": "cd89f8b639",
+    "paths": [
+      "src/modules/AiRuntime"
+    ],
+    "tools": [],
+    "request": "Help text for the agent: which phrasings protect a clip from changes. Tell me which of these actually protect the clip named Intro in this code, then fix my list: (1) 'keep Intro alone and raise the bass' (2) 'Leave Intro unchanged. Raise the bass.' (3) 'mute the drums; Keep Intro as is' (4) 'mute the drums but Keep Intro intact' (5) 'Alright, Keep Intro alone and rename Verse to Bridge' (6) 'mute the drums - Preserve Intro unchanged' (7) 'Retain Intro alone'.",
+    "key": {
+      "correct": "(1) to (4) protect; (5) to (7) do not. A capitalised protection verb counts only at a sentence start, after ; or :, or after and, but, then or so. Otherwise it is read as the start of a title-cased name (agentReference/readProtectionSlots.ts:79-100: opensTitleCasedPhrase, followsConjunction, opensClause, isSentenceInitial). A comma or dash is not a clause boundary, so (5) and (6) protect nothing and the other edit goes through. (7): the clip reader's verb list is leave, keep and preserve forms only (agentReference/clipProtectionReading.ts:19), while the shared slot reader also knows retain (readProtectionSlots.ts:6). The two readers disagree and no clip is protected.",
+      "flaws": "Assuming case-insensitive verbs everywhere; treating any punctuation as a boundary; assuming both readers share one verb list.",
+      "evidence": "At cd89f8b639: files above. Fixed by 90cc00bf42 (#6223), which shares PROTECTION_VERB and adds followsPunctuationBoundary; its body gives the Alright/Keep and Retain examples."
+    },
+    "source": "Time travel to the parent of #6223."
+  },
+  {
+    "id": "bulletproof-48",
+    "repo": "sd",
+    "at": "88e593de2b",
+    "paths": [
+      "src/modules/Transport"
+    ],
+    "tools": [],
+    "request": "Onboarding explainer: how the transport scheduler stays in time. Draft: \"A look-ahead scheduler works 100 ms ahead on the AudioContext clock. Each tick advances the song position by the elapsed audio time, capped at the look-ahead so a resumed context, whose clock jumps by the whole suspended gap, doesn't skip events. After a main-thread stall the position stays locked to the audio clock, so clicks and MIDI stay aligned with audio clips already playing.\" Check it and correct anything wrong, with refs.",
+    "key": {
+      "correct": "The look-ahead and the cap are right: SCHEDULE_AHEAD_SECONDS = 0.1 (playheadScheduler/projectLoopSeamWindow.ts:6), and MAX_DELTA_SECONDS = SCHEDULE_AHEAD_SECONDS clamps each tick (playheadScheduler/startPlayheadScheduler.ts:181-192,491-494). The rationale is wrong: under the Web Audio spec a suspended context's currentTime does not advance, so there is no resume jump to absorb. The stall claim is false. When the main thread stalls longer than 0.1 s while the context runs, the position advances only 0.1 s. Clicks, MIDI, newly started clips and automation then play late against audio clips and frozen tracks already sounding, by roughly the stall minus 0.1 s, and the offset accumulates until a loop wrap or stop.",
+      "flaws": "Repeating the code comment's suspend/resume rationale; asserting lock-step after stalls because the scheduler reads ctx.currentTime.",
+      "evidence": "At 88e593de2b: files above. Fixed by 2d23cbcbd1 (#6004), whose body states the late-by-stall effect and that the clamp's justification contradicts the Web Audio spec."
+    },
+    "source": "Time travel to the parent of #6004."
+  },
+  {
+    "id": "bulletproof-49",
+    "repo": "sd",
+    "at": "d650d8d418",
+    "paths": [
+      "src/modules/AudioEngine/stores",
+      "src/app/initAudioBufferCacheAccess.ts",
+      "src/modules/Command/useCases"
+    ],
+    "tools": [],
+    "request": "Explainer for the audio buffer cache, for the engine onboarding page. Draft: \"The runtime cache holds up to 64 AudioBuffers, LRU. It never evicts audio the arrangement uses, audio a project load pinned, or audio that undo/redo history still names, so undoing a clip delete always brings the sound back. Waveforms have their own 256-entry LRU.\" Verify and fix.",
+    "key": {
+      "correct": "The 64-entry LRU, pinned and live-reference protection, and the 256-entry waveform LRU are right (AudioEngine/stores/audioBufferCache.ts:105-134,180-187). Live references are only the buffer ids in the current trackStore (src/app/initAudioBufferCacheAccess.ts:18; eviction check audioBufferCache.ts:113-119). Nothing protects a buffer that only undo/redo history names. After a clip delete its buffer is evictable once 64 other buffers are cached, and undoing the delete restores a silent clip that export refuses. 'Always brings the sound back' is false.",
+      "flaws": "Assuming history-referenced buffers count as live; trusting the 'never evicts audio in use' wording to cover undo.",
+      "evidence": "At d650d8d418: files above. Fixed by 2e38d74fc4 (#6038), whose body describes the silent-clip-after-64-buffers failure and adds history residency and rehydration."
+    },
+    "source": "Time travel to the parent of #6038."
+  },
+  {
+    "id": "bulletproof-50",
+    "repo": "sd",
+    "at": "2601f0552f",
+    "paths": [
+      "src/modules/Arrangement",
+      "src/modules/CommandInterface",
+      "src/modules/TimelineEditor/presentations/views/Inspector"
+    ],
+    "tools": [],
+    "request": "Editing-basics help page. Draft: \"Drag an audio clip's right edge to lengthen it; it stops at the end of the recording unless the clip loops. The Inspector's Trim End slider has the same limit. Cmd+D puts a copy right after the clip and selects it, so pressing again keeps chaining copies to the right. Option+D copies the clip to the next bar line, following any meter changes in the song. With several clips selected, Cmd+D duplicates them all forward by the selection's span.\" Check each sentence against the code and fix.",
+    "key": {
+      "correct": "Only the multi-clip sentence and 'copy right after the clip' hold. (1) The right-edge drag has no source limit; it only snaps to grid and optionally to a zero crossing (Arrangement/presentations/hooks/useTimelineInteractions.ts:668-678). (2) Trim End's max is clip.startBeat + 256 (TimelineEditor/presentations/views/Inspector/ClipInspector.tsx:263). (3) Cmd+D dispatches duplicateClip for the selected clip (CommandInterface/.../handleKeydown.ts:246-249) and places it at the clip end (Arrangement/useCases/clip/duplicateClip.ts:12). Nothing moves the selection (no selection write in the key handler, handleDuplicateClip or duplicateClip), so repeated presses stack copies on the same spot. (4) Option+D uses Math.ceil(endBeat / beatsPerBar) * beatsPerBar with beatsPerBar = transportStore.timeSignatureNumerator (duplicateClipToNextBar.ts:10-16), a fixed grid from beat 0 that ignores the time-signature map. (5) Several selected clips go forward by the selection span via duplicateSelectedClipsForward, and a marquee duplicates the time range (handleKeydown.ts:233-244).",
+      "flaws": "Assuming DAW-standard source limits and selection-follow; trusting 'next bar' to respect meter changes.",
+      "evidence": "At 2601f0552f: files above. (1)-(2) fixed by 48a8012a44 (#6206), (3) by 6af2b58df8 (#6218); the numerator-only grid is unchanged at 95128133a2 (duplicateClipToNextBar.ts:11-16)."
+    },
+    "source": "Time travel to the parent of #6206 and #6218."
+  }
+]

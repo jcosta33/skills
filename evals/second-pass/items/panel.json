@@ -1,0 +1,482 @@
+[
+  {
+    "id": "panel-01",
+    "repo": "sd",
+    "at": null,
+    "paths": null,
+    "tools": [
+      "Agent"
+    ],
+    "request": "User report: they muted their lead vocal and the reverb return still has the vocal in it, live and in the bounced mix. Options I see: (1) move the pre-fader tap after the mute node in TrackNode and drop the muted-track cue-send branch in offline render, so mute means silence like Logic/Reaper; (2) add a per-track 'mute kills sends' toggle; (3) go back to excluding muted tracks from offline scheduling so at least the export is clean. Which one?",
+    "key": {
+      "correct": "None of the three. Keep the shipped behaviour: pre-fader sends survive mute in both live and offline runtimes (ADR 0017, accepted; Pro Tools / Ableton / Cubase-default model). Decisive reasons: (1) is the explicitly rejected Logic/Reaper alternative because it silently re-mixes every existing project that uses a muted cue send; (3) reintroduces the #794 defect, where export dropped cue-send content the live engine keeps, so export would stop matching what the user hears; (2) is not the deferred alternative either (ADR 0017 defers a Cubase-style workspace preference with a persisted field, to revisit only if users ask). Solo-in-place already gates preFaderTap via setSoloGate, so soloing is the existing way to silence the send. Answer to the user: working as designed (cue-send semantics).",
+      "flaws": "Recommends (1) as 'mute should mean silence', or overrides ADR 0017 by citing ADR 0016's 'no users, correctness wins'; recommends (3) without seeing it breaks live/export parity (#794); treats (2) as already sanctioned; fails to find ADR 0017 and decides from general DAW taste; misses that solo-in-place already closes the pre-fader tap.",
+      "evidence": ".agents/decisions/0017-pre-fader-sends-survive-mute.md (Decision, Alternatives rejected, Consequences re PR #794); src/modules/AudioEngine/engine/TrackNode.ts:414-443 (setMute zeroes postFaderGain downstream of preFaderTap; setSoloGate closes preFaderTap)."
+    },
+    "source": "ADR 0017 and TrackNode mute/solo gate code."
+  },
+  {
+    "id": "panel-02",
+    "repo": "sd",
+    "at": null,
+    "paths": null,
+    "tools": [
+      "Agent"
+    ],
+    "request": "Complaint: Toaster pattern plays fine but the exported mix has no drums. Ways I see to fix it: (a) make offline render and the native live session run the sequencer state directly so export plays what Play plays; (b) widen addMidiNote with probability/conditions/locks so To timeline is lossless, then bake automatically; (c) at export start, run To timeline automatically for any Toaster with an unbaked pattern. Which?",
+    "key": {
+      "correct": "None. ADR 0045 decided the Toaster step sequencer is a session-only performance tool; its arrangement truth is exactly what To timeline bakes, and export/native render only that. (a) cannot be faithful: the sequencer is free-running from the Play click and rolls probability and fill/first conditions live, so it has no arrangement position; the ADR explicitly declines building a projector. (b) the bake stays permanently lossy by decision; widening addMidiNote and every consumer for one instrument is out of scope. (c) the export advisory is deliberately a warning, never a gate, because it cannot tell a deliberate sketch from an oversight; auto-baking would write clips the user never asked for (and lossy ones). The product already handles this: the ToasterPanel hint ('Play sounds the pattern live only...') and the ExportDialog per-device warning via listToasterPatternsOutsideArrangement. Correct response: user presses To timeline; at most improve the warning's visibility. An arrangement-anchored pattern-region clip type would be a new feature with its own ADR.",
+      "flaws": "Picks (a) or (b) as the 'real fix'; picks (c) as harmless convenience without noticing it mutates the project silently and contradicts the warning-not-gate decision; misses that the hint and export warning already exist; proposes building new mechanism instead of pointing at ADR 0045.",
+      "evidence": ".agents/decisions/0045-toaster-sequencer-is-a-session-performance-tool.md; src/modules/AudioRendering/presentations/views/ExportDialog.tsx:285-289,1615-1623; src/modules/Toaster/presentations/views/ToasterPanel.tsx:895-899; src/modules/Toaster/useCases/listToasterPatternsOutsideArrangement.ts:32."
+    },
+    "source": "ADR 0045 plus the shipped hint and export advisory."
+  },
+  {
+    "id": "panel-03",
+    "repo": "sd",
+    "at": null,
+    "paths": null,
+    "tools": [
+      "Agent"
+    ],
+    "request": "Now that the native engine reports its real transport position (engine_transport_position), I want the click and punch in/out to be tight on desktop. Options: (a) move the metronome and punch into daw-engine since it owns the tempo map now; (b) keep them JS-side but have scheduleMetronome and the punch checks read the fed-back engine playhead instead of the scheduler's own integration; (c) leave both as they are. Pick one.",
+    "key": {
+      "correct": "(c). ADR 0039: metronome, count-in, pre-roll, punch and follow actions stay JS-side and evaluate against the clock that scheduled the sound, the playhead scheduler's own integration of the tempo map; the fed-back engine playhead is adopted for the cursor only. (b) mixes clocks: a decision that reads a different number than the scheduler's clip windows/loop wrap could open a punch window on a beat nothing was scheduled for. The metronome already schedules clicks onto the audio clock with lookahead, so it is sample-accurate already. (a) would duplicate the meter map across the IPC seam and split click gain/sound/accent policy for no timing gain. A later slice that makes native the audible path re-anchors the scheduler integration on the engine and all five follow unchanged.",
+      "flaws": "Picks (b) as 'use the more accurate clock'; picks (a); treats the fed-back playhead as a timing source rather than a cursor; misses ADR 0039.",
+      "evidence": ".agents/decisions/0039-transport-features-follow-the-fed-back-playhead.md (Decision, Metronome, Punch); src/modules/Transport/useCases/playheadScheduler/readNativeEngineCursorBeats.ts:17-28 is the only consumer of readNativeEnginePlayheadSeconds outside AudioEngine; src/modules/Transport/useCases/scheduling/scheduleMetronome.ts exists JS-side."
+    },
+    "source": "ADR 0039 and the fed-back playhead consumers."
+  },
+  {
+    "id": "panel-04",
+    "repo": "sd",
+    "at": null,
+    "paths": null,
+    "tools": [
+      "Agent"
+    ],
+    "request": "Starting launch modes for the clip launcher. Model options: (a) launchMode 'trigger' | 'gate' | 'toggle' | 'repeat' with an onRelease action on every mode; (b) same enum, onRelease only meaningful for gate and toggle; (c) same enum plus 'legato' as a fifth mode. Which?",
+    "key": {
+      "correct": "None. ADR 0018: model release as an orthogonal parameter (Bitwig-style) whose default is Continue (starting vocabulary Continue / Stop / Return / Next Action), not as a property of a mode enum. Trigger and Gate are not separate modes, they are release=Continue and release=Stop, so the 'one release effect' invariant holds by construction. Toggle ignores release and ends on its next down. Repeat stays the one genuinely distinct trigger behaviour. Legato is a separate axis, folded into neither trigger nor release. (a) and (b) give Toggle two pending end paths, the double-fire AC-004 forbids and no shipping DAW does; (c) folds legato into the mode.",
+      "flaws": "Picks (a) or (b); keeps Trigger and Gate as separate enum members without an orthogonal release parameter; puts legato in the mode enum; lets release apply to Toggle; designs from Ableton's mode list without finding ADR 0018.",
+      "evidence": ".agents/decisions/0018-clip-release-is-not-a-toggle-concern.md (Decision, Alternatives rejected, Consequences); no launch-mode or release-action code exists under src/modules/SessionLauncher (grep releaseAction/launchMode finds nothing)."
+    },
+    "source": "ADR 0018."
+  },
+  {
+    "id": "panel-05",
+    "repo": "sd",
+    "at": null,
+    "paths": null,
+    "tools": [
+      "Agent"
+    ],
+    "request": "Starting the native side of the clip launcher in daw-engine: the audio thread reads a per-scene slot table and the control thread replaces it on every edit. For freeing old tables: (a) basedrop (Shared + Collector), (b) arc-swap: store the new Arc, readers load, the old one drops whenever its last ref goes, (c) crossbeam-epoch. Which?",
+    "key": {
+      "correct": "None. ADR 0020: publish immutable generations by pointer swap and return the retired generation to the non-RT owner over the scheduler's existing rtrb retirement channel (RetiredGraphObjects), which does the drop; no new dependency, and the launcher must use the scheduler's retirement path rather than a second idiom. Size the ring so a full ring keeps the current generation rather than freeing on the callback. basedrop was the rejected source mandate (second lifetime model, thin release history; revisit only for genuinely shared multi-reader clip data); crossbeam-epoch rejected as overkill for one SPSC hand-off; arc-swap is a new dependency and lets the last reference drop on the audio thread, i.e. free() on the callback.",
+      "flaws": "Picks arc-swap or basedrop as the idiomatic Rust answer; adds a dependency; misses that daw-engine already depends on rtrb and has a retirement channel; misses the 'full ring keeps current generation' rule.",
+      "evidence": ".agents/decisions/0020-deferred-deallocation-off-the-audio-thread.md; crates/daw-engine/Cargo.toml:19 (rtrb), :34 (triple_buffer); crates/daw-engine/src/scheduler.rs:277,434,704-718 (retirement channel, retired_tx: Producer<RetiredGraphObjects>); no basedrop/arc-swap in Cargo.lock."
+    },
+    "source": "ADR 0020 and daw-engine scheduler retirement."
+  },
+  {
+    "id": "panel-06",
+    "repo": "sd",
+    "at": null,
+    "paths": null,
+    "tools": [
+      "Agent"
+    ],
+    "request": "Browser Crumbs stops loading samples once the pool hits its budget because nothing ever frees the old ones. I want a new load to free the sample it replaces. Options: (a) free the replaced sample right in the worklet's loadSample handler, it runs between render quanta, not in process(); (b) hand the old sample to a Worker to free, like ADR 0020's return channel; (c) build daw-dsp with atomics/shared memory so a Worker can free it. Which?",
+    "key": {
+      "correct": "None. Follow ADR 0051/0052 (the Levain precedent): the replacing message moves the displaced sample into a retired slot and frees nothing; the host then sends paced release messages, each freeing a bounded amount and answering whether more remains, fenced by the load token, and the next load waits until the previous release loop ends; a disposed processor drains in paced steps before the engine is freed. (a) is exactly the #4809 defect class: the message handler runs on the render thread, and a free that scales with sample size lands there. (b) is impossible: a Worker's wasm instance has separate linear memory and cannot free the worklet's. (c) a shared-memory build changes every device in the package and puts an allocator lock on the audio thread, which ADR 0020 forbids.",
+      "flaws": "Picks (a) because 'it is not in process()'; picks (b) not realising wasm-bindgen memory is per instance; picks (c); proposes ADR 0020's rtrb channel for the browser worklet; misses the paced-release/retired-slot pattern already shipped for Levain.",
+      "evidence": ".agents/decisions/0051-wasm-bank-commit-retires-instead-of-releasing-off-thread.md (Context, Decision); .agents/decisions/0052-a-disposed-wasm-engine-drains-in-paced-steps-before-it-is-freed.md; src/modules/AudioEngine/worklets/crumbsProcessor.ts:174-200 (loadSample handler adds to pool); crates/daw-dsp/src/crumbs/mod.rs:115-126,175-180 (add_sample, dropped_sample_writes); package.json wasm:dsp has no atomics flags."
+    },
+    "source": "ADRs 0051/0052 applied to the Crumbs worklet."
+  },
+  {
+    "id": "panel-07",
+    "repo": "sd",
+    "at": null,
+    "paths": null,
+    "tools": [
+      "Agent"
+    ],
+    "request": "Marketing wants Grand Boule positioned against Pianoteq and real grands on the launch page. Options: (a) run a MUSHRA test against real-piano recordings and publish the score; (b) a blind A/B poll of users vs Pianoteq and quote the result; (c) skip testing and say 'indistinguishable from a concert grand', backed by spectral plots. Which gets us a defensible claim?",
+    "key": {
+      "correct": "None: make no comparative realism claim. ADR 0022 dropped comparative realism claims from Grand Boule's (and Toaster's) acceptance criteria; describe the modelled mechanisms and measurable properties instead (as Pianoteq itself does), and keep a self-generated reference corpus only as a regression baseline. MUSHRA (ITU-R BS.1534-3 §2) says results mostly in the 80-100 band may be invalid, which is where a good model vs a real piano lands; BS.1116 is the right instrument but needs expert listeners and a licensed corpus, a research programme; an informal poll is neither; (c) ships an unsupported claim, the exact outcome the gate exists to prevent.",
+      "flaws": "Recommends (a) or (b) as rigorous enough; accepts (c) with caveats; proposes BS.1116 or a licensed corpus as the path to a claim; misses ADR 0022.",
+      "evidence": ".agents/decisions/0022-no-comparative-realism-claims.md (MUSHRA section, Decision, Why this is the cheap answer)."
+    },
+    "source": "ADR 0022."
+  },
+  {
+    "id": "panel-08",
+    "repo": "sd",
+    "at": null,
+    "paths": null,
+    "tools": [
+      "Agent"
+    ],
+    "request": "A limiter plugin crashed mid-session for a user and the master went loud because the failed slot passed dry. I'm inclined to change the failed-slot policy. Options: (a) every failed slot outputs silence; (b) auto-restart the plugin helper and resume; (c) keep dry for effects but silence anything that reports itself as dynamics (limiter/compressor/de-esser). Which?",
+    "key": {
+      "correct": "None; keep ADR 0021 DG-003. Effects with a valid dry input pass dry; instruments and effects without valid dry input go to zero. This exact risk, a crashed limiter or de-esser passing unprocessed, possibly loud material, was accepted explicitly, with the visible per-slot failure state as the mitigation. All-zero was rejected because a crashed EQ would mute the track and defeat the isolation project. Recovery is user-initiated only (explicit reload), never automatic. Plugin latency holds at its last validated value (PDC not renegotiated) and offline render behaves the same. A category-based exception (c) contradicts the accepted decision and would need a superseding ADR. What is still owed under the ADR: the 5 ms equal-power ramp into the failure output; the CLAP wrapper currently does a hard switch.",
+      "flaws": "Picks (a) (all-zero) or (b) (auto-restart); picks (c) as a reasonable refinement without noticing the risk was explicitly accepted; does not find ADR 0021; claims the ramp is already implemented.",
+      "evidence": ".agents/decisions/0021-plugin-isolation-by-binary-with-per-plugin-override.md (Failure output section); crates/daw-plugin-host/src/clap_wrapper.rs:2114-2143 (dry for effects with input, silence for instruments/no input, hard switch with ramp deferred); crates/daw-plugin-host/src/vst3_wrapper.rs:1576-1580."
+    },
+    "source": "ADR 0021 DG-003 and the CLAP/VST3 wrappers."
+  },
+  {
+    "id": "panel-09",
+    "repo": "sd",
+    "at": null,
+    "paths": null,
+    "tools": [
+      "Agent"
+    ],
+    "request": "Adding a durable grooveOffset to clip rows in the arrangement slot. Since the writer started embedding it, projects come up repair-required (mutations, saves and export blocked) because the raw-projection loss detector sees the field missing from the sanitized projection. Options: (a) add grooveOffset to the slot's discardsRaw so it stops being reported; (b) mark the slot ownsCrdtEncoding; (c) make the detector ignore unknown keys. Fastest safe one?",
+    "key": {
+      "correct": "None. Extend the slot's sanitizer to model grooveOffset in the same change. ADR 0040: a slot sanitizer is a projection, not a validator; it must preserve every durable field every writer embeds, and writer and sanitizer form one contract per slot. (a) discardsRaw is only for content deliberately stripped (a retired field, transient view state); declaring a durable field there launders a real projection loss and the field would vanish on every reload. (b) ownsCrdtEncoding is for adapters that own a wire encoding unlike the store shape, with the reason recorded at the site. (c) the fail-closed verdict must never be weakened. Verify with the store's spec plus the three pinned detector specs named in the ADR.",
+      "flaws": "Picks (a) as the 'declared discard' escape hatch; picks (b) or (c); treats the detector as the bug; does not extend the sanitizer.",
+      "evidence": ".agents/decisions/0040-crdt-slot-sanitizers-are-projections.md (Decision 1-3, Amended 2026-09-04); src/infra/store/storage/createAutomergeStorage.ts:204,224,673-690."
+    },
+    "source": "ADR 0040 and createAutomergeStorage opt-outs."
+  },
+  {
+    "id": "panel-10",
+    "repo": "sd",
+    "at": null,
+    "paths": null,
+    "tools": [
+      "Agent"
+    ],
+    "request": "Want the AI planner to write arpeggios ('give me a 4-bar arp in A minor on the new synth track'). Options: (a) tighten the prompt and let the model write the notes into addNotes; (b) add a generateArpeggio AppAction in AiGeneration and expose it in the agent catalog; (c) call AiGeneration's generator directly from compileArbitraryCommandList. Which?",
+    "key": {
+      "correct": "None. Add it as a deterministic MIDI transform (ADR 0043): declare the name, parameters and bounds (clipId, bars, a defaulted seed) in Command/models/MidiTransform.ts; implement the generator adapter in AiGeneration/useCases/midiTransforms and register it through MIDI_TRANSFORM_IMPLEMENTATIONS / registerMidiTransforms at bootstrap; expandMidiTransform expands it into ordinary addNotes commands that pass every addNotes check; out-of-bounds or overflowing notes are refused, never clamped; the descriptor is visible only once its generator is registered. The target clip may be a batch-local binding created in the same plan (ADR 0041). (a) is non-reproducible, uninspectable and burns the note budget; (b) creates a second execution path into the project; (c) makes AiRuntime import AiGeneration, breaking the acyclic graph the registry exists to keep.",
+      "flaws": "Picks (a) or (b); invents a new AppAction or tool path; has AiRuntime or Command import AiGeneration; clamps instead of refusing; misses the existing transform registry.",
+      "evidence": ".agents/decisions/0043-midi-transforms-compile-to-add-notes-through-the-command-registry.md; src/modules/Command/models/MidiTransform.ts:11-20; src/modules/Command/useCases/expandMidiTransform.ts; src/modules/AiGeneration/useCases/midiTransforms/midiTransformImplementations.ts; src/app/bootstrap.ts:94,668."
+    },
+    "source": "ADR 0043 and the MIDI transform registry."
+  },
+  {
+    "id": "panel-11",
+    "repo": "sd",
+    "at": null,
+    "paths": null,
+    "tools": [
+      "Agent"
+    ],
+    "request": "The two-carrier live playback is getting messy (meters showing levels nobody hears, roll offset between native and web tracks). Options: (a) a project-level switch: if any track has a plugin, run everything native and drop the web strips; (b) a per-track 'run on native engine' toggle in the mixer; (c) to cut down unheard-plugin notices, treat a plugin whose attach state hasn't been reported yet as native. Which?",
+    "key": {
+      "correct": "None. ADR 0044: the carrier is decided per strip by one pure law in AudioEngine/useCases/livePlayback/stripCarriers.ts; a track is native only when the engine can represent everything that reaches the speakers through it; where uncertain, the track stays on Web Audio, because a wrong web answer is an announced unheard plugin while a wrong native answer is a silent track. (a) silences every synth/WASM/MIDI/input track the native engine cannot build; (b) lets a user claim a track the engine cannot build (silence) and splits the law from the producer that must read it; (c) reverses the deliberate conservative direction. The meter (#3578), roll latency (#3577) and measurement (#3565) costs are accepted symptoms of the split that disappear when native hosts MIDI and the built-ins, at which point the law, gates and notices are deleted rather than extended.",
+      "flaws": "Picks (a), (b) or (c); proposes fixing the meter/latency symptoms by changing the carrier unit; misses the reversal condition; does not find ADR 0044 or stripCarriers.ts.",
+      "evidence": ".agents/decisions/0044-two-carrier-live-playback-until-native-hosts-every-device.md (Decision, Consequences); src/modules/AudioEngine/useCases/livePlayback/stripCarriers.ts:1-35,54,407-408."
+    },
+    "source": "ADR 0044 and the strip carrier law."
+  },
+  {
+    "id": "panel-12",
+    "repo": "sd",
+    "at": null,
+    "paths": null,
+    "tools": [
+      "Agent"
+    ],
+    "request": "Users import the same big sample packs into lots of projects and OPFS usage balloons. Options: (a) one global content-addressed media pool shared by all projects, refcounted; (b) on web, store File System Access handles to the user's sample folder (reference instead of embed); (c) keep per-project media but dedupe identical files across project directories by hash. Which?",
+    "key": {
+      "correct": "None as an engineering call. ADR 0014 (owner-ratified 2026-08-04): a project owns its audio; the sample library is a browse-and-import source, never a runtime dependency; importing copies in; deleting a project deletes its directory with no cross-project scan; duplicating a shared library per project is an accepted cost. openDAW's global content-addressed pool was considered and not taken; a refcounted hybrid was rejected as needing its own fault-injection gate, since a drifted refcount leaks disk or frees audio still in use; (c) reintroduces that shared ownership. (b): the web writer always embeds, because reopening an FSA handle needs requestPermission per file per session. Changing ownership is a product/data-loss decision for José, to be raised with options and a recommendation, not shipped.",
+      "flaws": "Picks (a) or (c) as the obvious storage optimisation; picks (b); treats it as purely technical; misses the ratified ownership and embed rulings in ADR 0014.",
+      "evidence": ".agents/decisions/0014-project-persistence-architecture.md:258-311 (per-asset embed ruling; audio ownership and version policy); src/modules/Project/repositories/project/projectDirectory.ts:235,315 (per-project media/ entries)."
+    },
+    "source": "ADR 0014 ratifications."
+  },
+  {
+    "id": "panel-13",
+    "repo": "sd",
+    "at": null,
+    "paths": null,
+    "tools": [
+      "Agent"
+    ],
+    "request": "Want to ship stem separation using an open model. Options: (a) fetch the weights from the upstream URL on first use (the code is MIT); (b) commit the ONNX into public/models so it's always there; (c) ship it now as a 'beta' toggle in Preferences while we sort out the weights' license. Which?",
+    "key": {
+      "correct": "None. Stem separation is withheld behind release admission: the open-source inventory entry stem-separation-models is 'defer-behind-admission' with the obligation 'Admit and verify a complete model and runtime stack before enabling the capability', and ADR 0030 makes an unadmitted stack unreachable and absent from product controls, so (c) is out. Admission needs the exact artifact proven: pinned revision, exact byte count and SHA-256 verified before storage or inference, a license proven for that exact artifact (a code or base-model license does not prove the weights, the WebLLM lesson), and, as Whisper does, the download only after an explicit user gesture; recorded in release/open-source-inventory.json and modelReleaseAdmission.ts, with an ADR as for 0035/0037. (a) skips pinning, verification and license proof; (b) commits an unproven artifact into the shipped web build.",
+      "flaws": "Picks (a) on the code license, (b), or (c) as a soft launch; treats pinning alone as sufficient; misses the admission contract and the withheld inventory entry.",
+      "evidence": "release/open-source-inventory.json:713-745 (stem-separation-models, defer-behind-admission); .agents/decisions/0030-exact-model-release-admission.md (Decision table); Kokoro/Whisper entries in the same file (pinned revision, size, SHA-256, user-gesture download)."
+    },
+    "source": "ADR 0030 and the release inventory."
+  },
+  {
+    "id": "panel-14",
+    "repo": "sd",
+    "at": null,
+    "paths": null,
+    "tools": [
+      "Agent"
+    ],
+    "request": "Arrangement needs Transport's TempoChange type (Transport/models/TempoMap.ts) for a new helper. Options: (a) export type { TempoChange } from '../models/TempoMap' in Transport/useCases/index.ts; (b) the same re-export from Transport/stores/index.ts since the tempo store holds them; (c) import it directly from '#/modules/Transport/models'. Which is least bad?",
+    "key": {
+      "correct": "None. Use TempoMapStoreState['changes'][number], whose store value type the Transport stores barrel already exports (store value types may cross), or keep a local shape on the consumer (Arrangement already does this in freezeBounce/offlineRenderDependencies.ts). docs/architecture/03-typescript-module.md: model types never cross a module boundary from any barrel or use case; useCases/index.ts never re-exports types (no-usecase-type-exports-on-index); each contract barrel re-exports only from its own folder, so stores/index.ts may not re-export from ../models; deep imports fail cross-module-index-only.",
+      "flaws": "Picks (a), (b) or (c); proposes adding a module-root index.ts or moving the type to src/utils; misses the store-value-type route.",
+      "evidence": "docs/architecture/03-typescript-module.md:191,425,439,446-452; src/modules/Transport/stores/index.ts (export type { TempoMapStoreState }); src/modules/Transport/stores/tempoMapStore.ts:25-26 (changes: TempoChange[]); src/modules/Arrangement/useCases/freezeBounce/offlineRenderDependencies.ts:1-13 (local TempoChange shape); .agents/decisions/0006-contract-folder-barrels-no-module-root-index.md."
+    },
+    "source": "Module type-boundary rules."
+  },
+  {
+    "id": "panel-15",
+    "repo": "sd",
+    "at": null,
+    "paths": null,
+    "tools": [
+      "Agent"
+    ],
+    "request": "Ableton users keep asking for a Texture warp mode for pads and ambient material. Options: (a) add 'Texture' to the mode picker as an alias of phase-vocoder; (b) bring back crumbs/warp/granular.rs as the Texture executor; (c) expose the real algorithm names (Re-Pitch / WSOLA / Phase Vocoder) so power users can choose. Which?",
+    "key": {
+      "correct": "None. ADR 0024: the executor set is closed at three (repitch, phase vocoder, WSOLA), and the user surface is named by material over them, as every surveyed DAW does; no DAW ships modes named by algorithm, so (c) goes against both. Texture is deliberately dropped, not aliased: shipping it as a synonym for Complex/phase-vocoder promises a technique Sourdaw does not run, so (a) is out; persisted 'texture' decodes to the default. granular.rs was deleted as dead code (#4273), and a granular executor would be a new engine needing an ADR superseding 0024. Point granular-texture users at the device-level granular engines (Fermenter, Bacteria).",
+      "flaws": "Picks (a), (b) or (c); revives the granular warp; exposes algorithm names; misses ADR 0024's explicit ruling on Texture.",
+      "evidence": ".agents/decisions/0024-warp-modes-are-named-by-material.md (Decision, Mapping); src/modules/Arrangement/models/WarpMarker.ts:46-75 (texture decodes to default); git log shows granular.rs deleted in 32179299bb (#4273)."
+    },
+    "source": "ADR 0024 and the WarpMarker decoder."
+  },
+  {
+    "id": "panel-16",
+    "repo": "sd",
+    "at": null,
+    "paths": null,
+    "tools": [
+      "Agent"
+    ],
+    "request": "Building MIDI 'capture what I just played'. Options: (a) keep the last 60 s of MIDI on every monitored track and, on Capture, drop a clip on each track that has data, like Live; (b) same, but only enable Capture once 16+ notes are buffered so we don't create junk clips; (c) buffer the last 2 minutes, armed track only. Which?",
+    "key": {
+      "correct": "None. ADR 0019: bound the MIDI buffer in events, not seconds, and show the implied duration range beside the event ceiling (the same buffer can mean minutes or seconds depending on controller density); capture MIDI passively on armed or monitored tracks; capture into one explicit target, the selected eligible track (Cubase/Studio One), not Live's fan-out; no content threshold, since the affordance is the indicator (grey Capture when nothing is buffered); flush on inactivity, keep the buffer after a successful capture, and provide an explicit clear command; never infer tempo unconditionally. (a) is time-bounded and fans out; (b) adds the 16-note threshold the ADR rejects; (c) is time-bounded and narrows eligibility to armed only.",
+      "flaws": "Picks any option; bounds MIDI in seconds; fans out across tracks; adds a note threshold; omits the clear command or the inactivity flush.",
+      "evidence": ".agents/decisions/0019-retrospective-capture-bounds.md (DG-001, DG-002, DG-003, DG-005, DG-006, Consequences); no MIDI retrospective code exists (crates/daw-engine/src/retrospective.rs is audio-only)."
+    },
+    "source": "ADR 0019."
+  },
+  {
+    "id": "panel-17",
+    "repo": "sd",
+    "at": null,
+    "paths": null,
+    "tools": [
+      "Agent"
+    ],
+    "request": "Windows musicians keep asking for ASIO. Options: (a) turn on cpal's asio feature and ship it; (b) Steinberg relicensed the ASIO SDK under GPLv3, so take it under that; (c) make WASAPI Exclusive the default so latency matches ASIO. Which?",
+    "key": {
+      "correct": "None. ADR 0027: Windows is IAudioClient3 shared low-latency by default, WASAPI Exclusive is an explicit opt-in (it claims the device and other apps lose audio; it must fall back to shared when the endpoint refuses the format), and Sourdaw does not host ASIO. (a) and (b) both mean taking the ASIO SDK, which is GPLv3-or-proprietary; ADR 0031 records GPLv3 as incompatible with Sourdaw's distribution (Apache-2.0 product), and the proprietary branch needs a signed Steinberg agreement. (c) breaks the opt-in requirement. Reversing this needs a new ADR on new licensing terms, which is a legal/product decision for José. No user-facing latency figure may be quoted unless measured on the shipped build.",
+      "flaws": "Picks (b) on the GPL relicensing; picks (a) without seeing it needs the ASIO SDK; picks (c); quotes latency numbers; misses ADRs 0027/0031.",
+      "evidence": ".agents/decisions/0027-windows-device-layer-iaudioclient3.md (Options, Decision, Consequences); .agents/decisions/0031-native-plugin-format-strategy.md (ASIO SDK GPLv3-or-proprietary, stays out; GPLv3 incompatible with Sourdaw distribution); LICENSE (Apache-2.0)."
+    },
+    "source": "ADRs 0027 and 0031."
+  },
+  {
+    "id": "panel-18",
+    "repo": "sd",
+    "at": null,
+    "paths": null,
+    "tools": [
+      "Agent"
+    ],
+    "request": "Fixed a typo in a doc comment in crates/daw-dsp/src/levain/engine.rs. Options: (a) no wasm rebuild, it's a comment; (b) run wasm:dsp then wasm:manifest; (c) run pnpm wasm:all to be safe. Which?",
+    "key": {
+      "correct": "None exactly. Any non-test edit in a package's path-dependency closure, comments included, changes its hash. daw-dsp is in the closure of two committed wasm packages: daw-dsp itself (wasm:dsp) and scoring, whose Cargo.toml path-depends on daw-dsp (wasm:scoring). Rebuild both under the guard (pnpm guard --profile broad -- pnpm wasm:dsp / wasm:scoring), then pnpm wasm:manifest, stage the artifacts, and run pnpm wasm:verify after staging. (a) leaves stale artifacts that PR CI's freshness check catches; (b) misses scoring, and wasm:manifest keeps hashes for packages with no rebuild evidence, so it can match a manifest over stale artifacts; (c) is the broad local fallback AGENTS.md forbids. proof-chamber and daw-wasm-decoder have no edge to daw-dsp.",
+      "flaws": "Picks (a); picks (b) without noticing scoring depends on daw-dsp; picks (c); skips the guard or the post-staging verify.",
+      "evidence": "AGENTS.md:584-595 (wasm artifacts rule) and :268-270 (no broad local runs); crates/scoring/Cargo.toml:15 (daw-dsp path dependency); crates/proof-chamber/Cargo.toml and crates/daw-wasm-decoder/Cargo.toml (no daw-dsp edge); package.json:103-109 (wasm scripts)."
+    },
+    "source": "AGENTS.md wasm-artifact contract and crate closures."
+  },
+  {
+    "id": "panel-19",
+    "repo": "sd",
+    "at": null,
+    "paths": null,
+    "tools": [
+      "Agent"
+    ],
+    "request": "Two small unrelated features ready to start: an invertTrackPolarity app action (mixer) and a setTrackComment app action (arrangement). Totally different files. Plan: open two lanes now and have two authors go in parallel, both PRs up today; or just do one PR with both. Which?",
+    "key": {
+      "correct": "Neither. Every app action feeds the generated command schema and the agent evidence manifest, so the two changes share generated files even though their handwritten files are disjoint. AGENTS.md: work that shares a generated file or pinned digest with a live lane waits for that lane to merge, or stacks on it only when it depends on its change. These are independent, so open one lane now and start the second after the first merges; don't stack the second (no real dependency). Don't bundle them either: one PR is for one cohesive change, and two unrelated outcomes need a named invariant to land together, which these lack. Other write-disjoint lanes can run meanwhile, within the five-lane cap.",
+      "flaws": "Recommends two parallel lanes because the files are disjoint; recommends stacking without a dependency; recommends one combined PR; misses the generated-artifact sharing rule.",
+      "evidence": "AGENTS.md:77-86 (one PR per cohesive change, write-disjoint parallelism) and :651-660 (app action feeds command schema and evidence manifest; waits or stacks); scripts/generateVersionedCommandArgumentSchemas.mjs, evidence/agent-campaign/manifest.json; src/utils/handlerContract.ts has no polarity or setTrackComment action."
+    },
+    "source": "AGENTS.md delivery rules."
+  },
+  {
+    "id": "panel-20",
+    "repo": "sd",
+    "at": null,
+    "paths": null,
+    "tools": [
+      "Agent"
+    ],
+    "request": "Desktop users with a hosted CLAP/VST3 plugin on a track can't export at all: the render refuses and tells them to bypass or remove the plugin. Getting complaints. Options: (a) render that track dry with a warning toast so the export at least completes; (b) auto-bypass the plugin for the render and note it in the export summary; (c) keep refusing for now. Which?",
+    "key": {
+      "correct": "(c). #4355 deliberately replaced exactly (a)/(b): offline render (mixdown, stems, freeze) goes through Web Audio, which cannot host the plugin, and quietly writing a plausible dry file was a silent loss (on freeze the dry render even replaced the audible track). The refusal names the track, plugin and remedy; the user can already bypass explicitly. A toast does not make the file match what they hear, and export must match what was heard. The fidelity fix is hosted-plugin export through the native engine (tracked as #4592), not a degraded file.",
+      "flaws": "Picks (a) or (b) for convenience; treats the refusal as the bug; misses the #4355 history and the native-export follow-up.",
+      "evidence": "git show 16846aabcc (#4355 message); src/modules/AudioEngine/useCases/buildDeviceChain.ts:284-296 (refusal text); git show dcbdb4f483 (#4596: 'Hosted plugin export is tracked in #4592'); .agents/decisions/0021-...md ('Offline render behaves identically so export matches what was heard')."
+    },
+    "source": "Commit history of the offline-render refusal."
+  },
+  {
+    "id": "panel-21",
+    "repo": "sd",
+    "at": null,
+    "paths": null,
+    "tools": [
+      "Agent"
+    ],
+    "request": "Want 'listen-only' collab invites so a client can follow a session without editing. Options: (a) put a role in the invite string and have each client disable editing UI for viewers; (b) have the host drop incoming Automerge changes from viewer peers; (c) bring back the old canControlTransport/viewer role scaffold and wire it up. Which?",
+    "key": {
+      "correct": "None as a quick engineering pick. The current contract is that an invite is an unconditional write bearer credential (ADR 0016 ruling 4; Collaboration AGENTS.md); the role scaffold was deleted because it enforced nothing, so (c) recreates what was removed for that reason. (a) is UI-only: a modified client still writes and peers merge its changes. (b) relies on a self-asserted role and on one peer's filter, while other peers apply non-host syncs to the root doc directly. Real restriction needs enforcement a peer cannot bypass, such as the design kept in the superseded SPEC-collaboration-roles-trust (host approval, signed revocable role tokens verified on every merge, append-only audit log). Restricting collaborators changes the security contract, so raise it with José as a product/security decision with options and a recommendation.",
+      "flaws": "Picks (a), (b) or (c); presents client-side gating as access control; misses ADR 0016 ruling 4 and the superseded spec's design record.",
+      "evidence": ".agents/decisions/0016-ultracode-session-scope-and-standard.md (ruling 4); src/modules/Collaboration/AGENTS.md:18; src/modules/Collaboration/useCases/collaboration/__tests__/sessionManagement.spec.ts:1217-1222; .agents/specs/collaboration-roles-trust/spec.md (superseded banner and Intent); AGENTS.md:11-12 (security consequences escalate)."
+    },
+    "source": "ADR 0016 ruling 4 and the collaboration trust model."
+  },
+  {
+    "id": "panel-22",
+    "repo": "sk",
+    "at": null,
+    "paths": null,
+    "tools": [
+      "Agent"
+    ],
+    "request": "Want to add worked examples to panel but keep SKILL.md short, progressive-disclosure style like Anthropic's own skills. Options: (a) skills/panel/references/examples.md, linked from SKILL.md; (b) docs/panel-examples.md, linked from SKILL.md; (c) a second skill, panel-examples. Which?",
+    "key": {
+      "correct": "None. The edit contract allows exactly one SKILL.md per skill (plus agents/openai.yaml only for a user-invoked skill). lint.sh fails nested or extra files, and test-lint's nested-file mutation is literally references/x.md, so (a) fails. lint rejects relative links in a SKILL.md, and an installed skill would not carry docs/, so (b) breaks the standalone rule. (c) makes panel depend on a sibling; 'a skill that works only beside its siblings is broken', and it would also need a catalog row. Also, change a skill only for a witnessed failure, with the with/without result recorded in the commit message. If a witnessed failure justifies examples, inline the minimal example in SKILL.md; otherwise add nothing.",
+      "flaws": "Picks (a) following generic Anthropic guidance; picks (b) or (c); ignores the witnessed-failure gate.",
+      "evidence": "AGENTS.md (Edit contract: one SKILL.md, only agents/openai.yaml; witnessed failure); scripts/lint.sh payload checks and the relative-link check; scripts/test-lint.sh nested-file mutation."
+    },
+    "source": "skills repo edit contract and lint."
+  },
+  {
+    "id": "panel-23",
+    "repo": "sk",
+    "at": null,
+    "paths": null,
+    "tools": [
+      "Agent"
+    ],
+    "request": "A hedge ('you may want to consider...') slipped into a skill last week and nothing caught it. Want lint to catch vague or hedged rules. Options: (a) call claude -p with Haiku from lint.sh to flag hedged or ambiguous lines; (b) a non-blocking CI job where Sonnet reviews each changed SKILL.md and comments; (c) leave it to review. Which?",
+    "key": {
+      "correct": "None. AGENTS.md: lint uses deterministic rules only, because LLM ambiguity checks score near chance, which rules out (a) and (b). The authoring rule ('No hedges or modal verbs') is mechanically checkable, so (c) leaves a witnessed failure in place. Add a deterministic pattern check for hedge and modal phrasing to scripts/lint.sh, prove it bites with a new mutation in scripts/test-lint.sh, probe that legitimate words do not trip it (as 08dda7f did for method names), and fix existing hits. CI already runs both scripts.",
+      "flaws": "Picks (a) or (b); picks (c); adds a check without a test-lint mutation.",
+      "evidence": "AGENTS.md (Authoring rules: 'No hedges or modal verbs', 'Lint with deterministic rules only. LLM ambiguity checks score near chance.'); scripts/test-lint.sh mutation loop; commit 08dda7f message; .github/workflows lint job."
+    },
+    "source": "skills repo authoring rules and lint precedent."
+  },
+  {
+    "id": "panel-24",
+    "repo": "sk",
+    "at": null,
+    "paths": null,
+    "tools": [
+      "Agent"
+    ],
+    "request": "Adding a standup micro skill that must only run when I call it, in Claude Code, Codex, Cursor and Gemini CLI. Options: (a) disable-model-invocation: true in frontmatter; (b) agents/openai.yaml with allow_implicit_invocation false; (c) just say 'Use only when the user asks' in the description. Which one?",
+    "key": {
+      "correct": "All three together; no single option covers all four harnesses. Claude Code and Cursor honour disable-model-invocation, Codex honours agents/openai.yaml, and Gemini CLI honours neither, hence the description line. lint requires agents/openai.yaml if and only if disable-model-invocation: true, and its content must be exactly 'policy:' plus '  allow_implicit_invocation: false' in block style. Also add a README Micro catalog row (lint matches the catalog to skills/). The description must be one line of at most 1024 characters, without ': ', '<' or '>', and must not contain the skill's own name. No other frontmatter keys are allowed. Check that no sibling SKILL.md uses the new name as a word, since lint's sibling-name rule forced next to be renamed whatsnext.",
+      "flaws": "Picks a single option; omits the openai.yaml or gets its content wrong; omits the README row; writes 'standup' in the description; ignores sibling-name collisions.",
+      "evidence": "README.md Micro section; scripts/lint.sh (frontmatter, openai.yaml iff disable-model-invocation, self-name, sibling-name, catalog match); commit 7bf943f (next renamed whatsnext; Gemini line); commit d598610 (where each flag is honoured)."
+    },
+    "source": "skills repo micro-skill conventions."
+  },
+  {
+    "id": "panel-25",
+    "repo": "sk",
+    "at": null,
+    "paths": null,
+    "tools": [
+      "Agent"
+    ],
+    "request": "dissect under-triggers on 'what calls X' questions. Two candidate descriptions. A: 'Trace one code path to closure. Use when the user asks who calls X, what reaches Y, or whether code is dead: even when a quick search seems to answer it. Do not use to check claims.' B: 'Use dissect to trace who calls, what reaches, and how code flows, proving every caller and branch, even when a quick search seems to answer it. Do not use to map a whole area.' Which one?",
+    "key": {
+      "correct": "Neither as written, and not by reading them. A contains ': ', which lint rejects as YAML-unsafe; B names its own skill ('dissect'), which lint rejects. Beyond lint, AGENTS.md gates every description change with the trigger eval: about 20 queries in the user's own words (half should-trigger, half near misses), each run 3 times through claude -p with the model pinned, should-trigger passing at a rate of 0.5 or more and near misses below 0.5. Run the old description and the fixed candidates on the same set, keep a new one only if it passes more queries and adds no false trigger, and commit the queries and per-query rates under evals/ with the witnessed failure and results in the commit message.",
+      "flaws": "Picks A or B on wording; misses either lint failure; skips the trigger eval; compares candidates against each other without the old description.",
+      "evidence": "scripts/lint.sh description checks (/:[[:space:]]/ and the self-name rule); AGENTS.md Trigger eval steps 1-4 and the Frontmatter rule ('Never name the skill itself'); scripts/test-lint.sh yaml-colon and self-name mutations."
+    },
+    "source": "skills repo trigger-eval gate and lint."
+  },
+  {
+    "id": "panel-26",
+    "repo": "sk",
+    "at": null,
+    "paths": null,
+    "tools": [
+      "Agent"
+    ],
+    "request": "People installing the skills can't tell what changed between pulls. Options: (a) add CHANGELOG.md plus a VERSION file and tag releases; (b) GitHub Releases generated from the conventional commits; (c) a 'Changes' section at the bottom of the README. Which?",
+    "key": {
+      "correct": "None. 2315dfc deliberately deleted VERSION, CHANGELOG.md and the release, pinning and cutover rules: the catalog is personal and git history is the record. Commit messages already carry the witnessed failure and the with/without result for every skill change (AGENTS.md), so point people at git log. (c) turns the README catalog into a drifting change list; (a) and (b) reintroduce the release machinery the owner removed.",
+      "flaws": "Recommends (a), (b) or (c); treats a changelog as standard hygiene without finding the deletion in history.",
+      "evidence": "git show 2315dfc (message: 'The catalog is personal: VERSION, CHANGELOG.md, and the release, pinning, and cutover rules are deleted. Git history is the record.'); AGENTS.md Edit contract (record failure and result in the commit message); README.md (no version or changelog)."
+    },
+    "source": "skills repo history."
+  },
+  {
+    "id": "panel-27",
+    "repo": "sk",
+    "at": null,
+    "paths": null,
+    "tools": [
+      "Agent"
+    ],
+    "request": "Want handoff to also save its brief to disk so the next agent can find it if I lose the chat. Options: (a) write HANDOFF.md at the repo root; (b) write it to ~/.agents/artifacts/handoff-<date>.md; (c) write .claude/handoff.md (gitignored). Which?",
+    "key": {
+      "correct": "None. Edit contract: skills write no document of their own; they answer in chat or edit their target. The README says the same for the whole catalog ('None of these writes a document of its own'), and handoff's catalog row is 'paste-ready brief for a fresh agent, in chat'. Durable artifacts belong to Corpus skills, not this catalog. Any file location breaks the contract.",
+      "flaws": "Picks any file location; proposes a flag to optionally write a file; misses the edit contract.",
+      "evidence": "AGENTS.md Edit contract ('Skills write no document of their own: they answer in chat or edit their target.'); README.md Micro table (handoff row) and the paragraph 'None of these writes a document of its own'."
+    },
+    "source": "skills repo edit contract."
+  },
+  {
+    "id": "panel-28",
+    "repo": "sk",
+    "at": null,
+    "paths": null,
+    "tools": [
+      "Agent"
+    ],
+    "request": "Rewrote settle's steps to be tighter. Ran current vs rewrite on 10 tasks with fresh Opus, and the rewrite won 8/10 on my rubric. Good to ship? Options: (a) ship; (b) run 10 more items first; (c) also try it on Sonnet, then ship.",
+    "key": {
+      "correct": "Not yet; none of these is the missing step. AGENTS.md: a rewrite ships only if it beats paraphrases of the old text that keep its meaning, because format alone swings results widely, so a current-vs-rewrite comparison cannot separate the content change from rewording. Run paraphrase arms of the current text. A skill also changes only for a witnessed failure, which must be named and recorded with the with/without result in the commit message. If the description changes too, the trigger eval gates it. More items (b) or another model (c) do not fix the missing control.",
+      "flaws": "Picks (a), (b) or (c); treats 8/10 against the current text as sufficient; omits the witnessed-failure record.",
+      "evidence": "AGENTS.md Authoring rules ('A rewrite ships only if it beats paraphrases of the old text that keep its meaning; format alone swings results widely.') and Edit contract ('Change a skill only for a witnessed failure. Record the failure and the with/without result in the commit message.')."
+    },
+    "source": "skills repo authoring gate."
+  },
+  {
+    "id": "panel-29",
+    "repo": "sk",
+    "at": null,
+    "paths": null,
+    "tools": [
+      "Agent"
+    ],
+    "request": "dissect's 'state what would refute it before each probe' step comes from the POPPER paper (Huang et al. 2025). Want to credit it. Options: (a) add '(after POPPER, Huang et al. 2025)' inline in that step; (b) a short Sources footer in dissect's SKILL.md with the arxiv link; (c) both. Which?",
+    "key": {
+      "correct": "None, and nothing is needed. lint.sh's method/thinker rule matches 'popper' case-insensitively anywhere in a SKILL.md, so (a) fails lint, and so does (b) whenever the footer names the paper; a bare arxiv URL would pass lint, but it still breaks the rule to credit sources in docs/sources.md rather than in a skill, and it changes no behaviour.  and docs/sources.md already lists POPPER (Huang et al., 2025 preprint, arxiv 2502.09858) under dissect.",
+      "flaws": "Picks (a), (b) or (c); does not see that the paper name trips the lint regex (or puts a bare link in the skill); misses that docs/sources.md already credits it.",
+      "evidence": "scripts/lint.sh method-name regex (popper(ian)?, grep -Eiq); AGENTS.md Authoring rules ('Credit sources in docs/sources.md'); docs/sources.md ## dissect POPPER entry; commit 08dda7f."
+    },
+    "source": "skills repo lint and sources doc."
+  },
+  {
+    "id": "panel-30",
+    "repo": "sk",
+    "at": null,
+    "paths": null,
+    "tools": [
+      "Agent"
+    ],
+    "request": "The Agent Skills spec has an optional license field. Since people install single skills, I want each SKILL.md to carry license: MIT so the license travels with it. Options: (a) add license: MIT to every frontmatter; (b) add it only to the micro skills; (c) add a 'License: MIT' line at the bottom of each body. Which?",
+    "key": {
+      "correct": "None. The edit contract fixes the frontmatter to name and description, plus disable-model-invocation for micro skills, and lint fails any other key ('unknown frontmatter key'). test-lint's unknown-key mutation is literally 'license: MIT', so (a) and (b) are designed to fail. (c) adds a non-procedural line for no witnessed failure. The repository LICENSE (MIT) already covers the catalog. Allowing the key would be an edit-contract change to AGENTS.md, lint and test-lint, justified by a witnessed failure.",
+      "flaws": "Picks (a) because the spec allows it; picks (b) or (c); misses the lint key whitelist and the existing unknown-key mutation.",
+      "evidence": "AGENTS.md Edit contract ('Frontmatter holds name ... and a one-line description'); scripts/lint.sh frontmatter key whitelist (name|description|disable-model-invocation); scripts/test-lint.sh unknown-key mutation (inserts 'license: MIT'); LICENSE (MIT)."
+    },
+    "source": "skills repo frontmatter contract."
+  }
+]

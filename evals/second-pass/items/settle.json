@@ -1,0 +1,422 @@
+[
+  {
+    "id": "settle-01",
+    "repo": "sd",
+    "at": null,
+    "paths": null,
+    "tools": [],
+    "request": "Space is toggling buttons instead of playing again. I tabbed over to the Loop button, hit Space, and Loop flipped instead of playback starting. #6219 was supposed to kill this. Fix it properly this time: Space should always go to the transport.",
+    "key": {
+      "correct": "Not a regression and not a bug. Since #5428 a keyboard (Tab) focused button keeps native Space/Enter activation on purpose, and #6219 kept that: it only reroutes Space/Enter for a button that took focus from a mouse press. Tabbing to Loop and pressing Space is supposed to toggle Loop. The answer should decline to send Space to the transport for every focused button, because that removes keyboard activation of buttons (an accessibility contract). It cites the code and test that pin the behaviour and needs no question. At most it adds one recommendation-led question in case José still wants to override keyboard activation.",
+      "flaws": "Treats it as a regression of #6219 and changes keyboardShortcutsContract.ts so Space always reaches the transport, or deletes the Tab-focused-button branch. Misses that the reported case is the Tab path the PR deliberately left alone. Asks José open-endedly what he wants without first establishing that the behaviour is intended.",
+      "evidence": "src/modules/CommandInterface/presentations/views/keyboardShortcutsContract.ts:87 (preservesNativeButtonActivation excludes only the pointer-focused button); __tests__/keyboardShortcutsContract.spec.tsx:388 'leaves unmodified %s to a Tab-focused button'; commit 1af5f3a7be (#6219) body: 'Only a button reached from the keyboard keeps native Enter and Space activation, as #5428 intended' and How-to-test step 4; commit 92852e1228 (#5428) 'preserve native button keyboard activation'; no later commit touches the file."
+    },
+    "source": "Commits #6219 and #5428 and the keyboard shortcut contract and its spec."
+  },
+  {
+    "id": "settle-02",
+    "repo": "sd",
+    "at": null,
+    "paths": null,
+    "tools": [],
+    "request": "#6213 changed the Yeast export so notes stored past the loop length on a looping clip no longer render. A couple of my older projects relied on that in their bounces. Add a project-version check so projects saved before #6213 keep the old export behaviour. Per-project flag or a global setting, which do you prefer?",
+    "key": {
+      "correct": "Neither. The answer builds no legacy path. ADR 0016 ruling 3 is an accepted owner decision: there are no users, correctness wins outright, and there are no compatibility shims and no version-gated legacy behaviour. ADR 0023 and the decision docket reapply it to changes in how existing projects sound. #6213 deliberately made live playback and export agree, matching the synth route and DAW convention for content outside the loop brace, and its commit says such saved projects stop exporting the hidden notes. The fix for José's projects is a content edit, such as lengthening the loop or moving the notes inside it, not code. No question to José is needed because the question is already settled.",
+      "flaws": "Implements a per-project or global legacy flag. Answers the false 'which do you prefer' choice. Escalates it to José as an open product decision, or asks him whether shims are allowed, without citing ADR 0016. Calls #6213 a regression.",
+      "evidence": ".agents/decisions/0016-ultracode-session-scope-and-standard.md:42-45 (ruling 3); .agents/decisions/0023-allpass-fractional-delay-in-the-string-loop.md:74-76; .agents/decisions/open-decision-docket.md:~113-118 and 1194-1195; commit 2601f0552f (#6213) body: 'Saved projects with such hidden notes on Yeast tracks stop exporting them' and 'as the synth route and other DAWs already treat content outside the loop brace'."
+    },
+    "source": "Commit #6213, ADR 0016 ruling 3, ADR 0023, and the decision docket."
+  },
+  {
+    "id": "settle-03",
+    "repo": "sd",
+    "at": null,
+    "paths": null,
+    "tools": [],
+    "request": "Small cleanup in vite.config.ts. The dev-server watcher ignore uses a hand-rolled AGENT_STATE_DIR / isAgentStatePath check while the vitest config just uses globs. Replace the function with a '**/.agents/**' glob in server.watch.ignored so it's consistent.",
+    "key": {
+      "correct": "Don't make the change. The anchored check is deliberate (#6215). The watcher matches absolute paths, and a dev server running inside a lane (.agents/worktrees/<lane>/...) has /.agents/ in every one of its own source paths. A '**/.agents/**' glob would make a lane's dev server ignore its own edits, which breaks step 4 of #6215's test plan. The vitest excludes are not the same pattern: they are root-relative ('.agents/worktrees/**', '.agents/review-worktrees/**') collection excludes, not absolute-path watcher matches. The answer decides this from the code comment and commit, with no question.",
+      "flaws": "Makes the glob change. Claims the two are equivalent. Asks José which style he prefers. Misses the in-lane dev server case.",
+      "evidence": "vite.config.ts:73-84 (comment: 'The check is anchored to this checkout: the watcher matches absolute paths, and a server running inside a lane has `.agents` in every one of its own source paths'); vite.config.ts:152 (watch.ignored: [isAgentStatePath]); vite.config.ts:186-202 (vitest root-relative excludes); commit 8b6fb56df8 (#6215) body: 'rather than written as a **/.agents/** glob ... a glob would stop it from seeing its own edits'."
+    },
+    "source": "Commit #6215 and vite.config.ts."
+  },
+  {
+    "id": "settle-04",
+    "repo": "sd",
+    "at": null,
+    "paths": null,
+    "tools": [],
+    "request": "The advisory semantic-review comment stopped showing up on PRs about a week ago. It was useful. Find what broke in the workflow and fix it.",
+    "key": {
+      "correct": "Nothing broke. It was retired on purpose. ADR 0055 (2026-10-28, commit 8cecc2ccdf, #5792) retired the advisory semantic review scanner, provider requests, hosted check and assessment retrieval. It deleted .github/workflows/semantic-review.yml and superseded ADRs 0046 and 0047. Its stated consequence is that the hosted workflow no longer spends provider credits. The answer does not restore the workflow. Bringing it back would mean a new ADR superseding 0055 and renewed provider spend, which is José's call. Reporting the retirement is enough; at most one recommendation-led question about reinstating it.",
+      "flaws": "Debugs or 'fixes' the workflow, for example by recreating semantic-review.yml or re-adding the provider call. Treats ADR 0046/0047 as current. Reports a broken secret or quota as the cause. Never finds ADR 0055.",
+      "evidence": ".agents/decisions/0055-retire-automatic-semantic-review.md (status accepted, supersedes 0046, 0047; 'The hosted workflow no longer spends provider credits'); `git log --diff-filter=D -- .github/workflows` shows semantic-review.yml deleted in 8cecc2ccdf; .agents/decisions/README.md rows 0046/0047 'superseded by 0055'."
+    },
+    "source": "ADR 0055 and the retirement commit #5792."
+  },
+  {
+    "id": "settle-05",
+    "repo": "sd",
+    "at": null,
+    "paths": null,
+    "tools": [],
+    "request": "My PR is at five REQUEST_CHANGES rounds and review:publish refuses to post round six. ADR 0053 says I replaced the hard freeze with an advisory warning. What flag do I pass to get past it?",
+    "key": {
+      "correct": "There is no flag. ADR 0053's warning clause was itself overturned: ADR 0054 (2026-10-22) reinstated the hard freeze at five reviewer REQUEST_CHANGES rounds (REVIEW_ROUND_FREEZE_THRESHOLD = 5) and did not restore the warning. AGENTS.md says review:publish refuses every fresh reviewer publication on a frozen PR and that no caller document lifts the freeze. The way out is to respin the change as one consolidated PR and close the frozen one with pr:supersede once the replacement merges. review:repair and review:confirm stay open so existing threads can still be resolved. No question needed.",
+      "flaws": "Invents an override flag or caller document. Concludes from 0053's 'Superseded 2026-09-27' section that only a warning applies. Suggests bypassing the script, for example with a manual gh review. Asks José to lift the freeze.",
+      "evidence": ".agents/decisions/0053-freeze-pull-requests-at-five-review-rounds.md header 'Reinstated by 0054, 2026-10-22' ('The warning-flag clause of the decision below is not restored'); .agents/decisions/0054-proportional-machine-checked-review-floor.md:72-74, 94; AGENTS.md:189-197 ('is frozen ... no caller document lifts the freeze. Respin ... pr:supersede'); scripts/reviewRoundEscalation.ts:19."
+    },
+    "source": "ADR 0053/0054 supersession chain and the AGENTS.md review-freeze rule."
+  },
+  {
+    "id": "settle-06",
+    "repo": "sd",
+    "at": null,
+    "paths": null,
+    "tools": [],
+    "request": "Orchestrating the Levain bank-retire PR. Risk plan says realtime-audio. AGENTS says use the strongest tier for real-time audio, so I'm putting the stance reviewers on Opus. Or do you want Fable on that one? Which?",
+    "key": {
+      "correct": "Neither. The Delegation section's 'strongest for real-time audio' governs author and orchestrator task routing. The Review section sets a reviewer-only ceiling: reviewers use only fast, low-cost mid-tier models (economy or standard) for every stance, explicitly including real-time audio, security and data loss. Fable, Astra, Opus and any Sol model are banned for reviewers. Keep the realtime-audio specialist stance and get rigor from independent stances and discriminating probes, not a bigger model. Prefer a reviewer model different from the author's, and record modelExhaustion if only one permitted model is available. review:publish refuses 'strongest' draw metadata. The repo text decides this, so no question to José.",
+      "flaws": "Picks Opus or Fable for reviewers. Asks José to choose between them. Resolves the conflict in favour of the Delegation line. Misses that the reviewer ceiling overrides it for reviewers.",
+      "evidence": "AGENTS.md:102-107 ('Use economy or standard for every review stance, including real-time audio ... Never use frontier or high-end review models: Fable, Astra, Opus, or any Sol model. This ceiling applies to reviewers only'); AGENTS.md Delegation section ('Use strongest for architecture, real-time audio ...'); AGENTS.md:109-111 (diversity, modelExhaustion); AGENTS.md ~170-177 ('`strongest` metadata refuses a fresh publication')."
+    },
+    "source": "Conflict between AGENTS.md Delegation tiering and the reviewer cost ceiling."
+  },
+  {
+    "id": "settle-07",
+    "repo": "sd",
+    "at": null,
+    "paths": null,
+    "tools": [],
+    "request": "Most of my plugins on this Mac are AUs. Start Audio Unit hosting in daw-plugin-host. Which bindings crate should we use for AU?",
+    "key": {
+      "correct": "Don't start AU work or pick a crate. ADR 0031 (accepted) puts Audio Units permanently out: AU is macOS-only, Sourdaw is cross-platform, and CLAP and VST3 cover the same plugins, most of which also ship VST3 or CLAP builds. The scanner recognises .component bundles and refuses them with a permanent reason (AUDIO_UNIT_REFUSAL). The supported route to José's library is VST3, which is committed via the vst3 0.3.0 crate already in daw-plugin-host's Cargo.toml. Reversing this needs a new ADR superseding 0031, which is José's product call. The answer reports the decision and recommends VST3, with at most one question about whether he wants to supersede 0031.",
+      "flaws": "Proposes or starts an AU implementation or names an AU bindings crate. Treats AU as merely unscheduled. Asks José what to do without surfacing ADR 0031 and the VST3 path.",
+      "evidence": ".agents/decisions/0031-native-plugin-format-strategy.md 'Audio Units are out' and Consequences ('VST2's and AU's are permanent and say so'); crates/daw-plugin-host/src/scanner.rs:410 (AUDIO_UNIT_REFUSAL) and :513 (.component -> AudioUnit); crates/daw-plugin-host/Cargo.toml:25 (vst3 = \"0.3.0\")."
+    },
+    "source": "ADR 0031 and the plugin scanner refusal constants."
+  },
+  {
+    "id": "settle-08",
+    "repo": "sd",
+    "at": null,
+    "paths": null,
+    "tools": [],
+    "request": "Assembling the release candidate. ADR 0036 says Grand Boule's public source, web and desktop distribution stays blocked until OS-10 installs the project grant. Do I strip Grand Boule out of the candidate, or is there a flag for it?",
+    "key": {
+      "correct": "Neither: ship it as is. The blocker ADR 0036 names was discharged the day after the ADR. Commit 43e7c3b76c (#2731, 2026-08-23) licensed Sourdaw under Apache-2.0. scripts/checkProjectLicense.ts now lists 'pending:OS-10-project-grant' among RETIRED_PROJECT_LICENSE_MARKERS and fails if it appears in release/open-source-inventory.json or checkReleaseInventory.ts. The grand-boule inventory record carries licenses ['Apache-2.0'] and releaseModes source, web and desktop, and its evidence says ADR 0036 records the owner's Apache-2.0 grant. The ADR text is historical because ADRs are immutable. Nothing to strip and no question to José.",
+      "flaws": "Strips Grand Boule or invents an exclusion flag on the strength of ADR 0036's sentence. Cites superseded ADR 0032 as live. Asks José whether the grant happened instead of checking the license gate and inventory.",
+      "evidence": ".agents/decisions/0036-readmit-grand-boule.md:60-63 and :134 (blocked pending OS-10-project-grant), dated 2026-08-22; commit 43e7c3b76c 'feat(legal): license Sourdaw under Apache-2.0 (#2731)' 2026-08-23; scripts/checkProjectLicense.ts:43-55 (RETIRED_PROJECT_LICENSE_MARKERS incl. 'pending:OS-10-project-grant') and :124-139 (scan of inventory and checkReleaseInventory.ts); release/open-source-inventory.json:1143-1151, 1215-1225 (grand-boule releaseModes, Apache-2.0, evidence line); scripts/checkReleaseInventory.ts:1595-1600."
+    },
+    "source": "ADR 0036 stale consequence line versus the license gate and release inventory."
+  },
+  {
+    "id": "settle-09",
+    "repo": "sd",
+    "at": null,
+    "paths": null,
+    "tools": [],
+    "request": "Grand Boule: I want the soundboard Brightness control to also shorten the high-partial decay on the strings, the way a dull board soaks up treble. Plumb soundboard_brightness into the string damping coefficients.",
+    "key": {
+      "correct": "Don't implement it. Ask José one sharp question with a recommendation, because this is legal exposure, not an engineering call. ADR 0036 readmitted Grand Boule on a patent design-around against US7915515B2 claim 1. The claim element 'coefficients produced from physical parameters that comprise both a measurable sounding-board property and the string parameter' is absent because string coefficient derivation receives no soundboard or body input. Feeding soundboard_brightness into string damping reintroduces exactly that element. It also breaks the pinned coefficient-isolation test and the release-inventory evidence. The recommendation: keep the isolation and get the darker decay from the post-aggregate body (brightness/tone_color kernels) or a voicing control with no soundboard input. Only change the coupling after a fresh legal review that José authorises.",
+      "flaws": "Implements the coupling or edits or deletes the isolation test. Treats it as purely technical. Asks a generic 'are you sure?' without naming the patent design-around and the legal exposure. Asks several questions or none.",
+      "evidence": ".agents/decisions/0036-readmit-grand-boule.md:43-51 (claim-1 table, 'String coefficient derivation receives no sounding-board property'), :60-73 (body after aggregation; controls never alter string state), :75-79 (polarization curves receive no soundboard input); crates/daw-dsp/src/grand_boule/engine.rs:1073 soundboard_controls_do_not_change_string_modal_coefficients; release/open-source-inventory.json grand-boule evidence 'string-coefficient isolation'; AGENTS.md:11-12 (legal exposure counts as product consequence, escalate with options and one recommendation)."
+    },
+    "source": "ADR 0036 patent design-around and the Grand Boule coefficient-isolation test."
+  },
+  {
+    "id": "settle-10",
+    "repo": "sd",
+    "at": null,
+    "paths": null,
+    "tools": [],
+    "request": "Bug: I muted the Drums track and the reverb return still has drums in it. The send is pre-fader. Mute should mean silence. Fix the routing so mute kills pre-fader sends too.",
+    "key": {
+      "correct": "This is not a defect. ADR 0017 (accepted) keeps pre-fader sends alive through mute, the Pro Tools / Ableton / Cubase-default model, so a performer's cue mix survives the engineer muting a channel. TrackNode taps preFaderTap upstream of the mute (postFaderGain). Solo-in-place does gate pre-fader sends. Switching to the Logic/Reaper model reverses an accepted product decision and needs a superseding ADR, so it is José's call. The answer does not change the routing. It can recommend the ADR's deferred alternative (a Cubase-style 'mute pre-sends when muted' preference) or making that send post-fader, in at most one recommendation-led question.",
+      "flaws": "Moves the tap or adds mute gating to pre-fader sends, treating it as a bug. Misses ADR 0017. Asks José an open question without the evidence and options.",
+      "evidence": ".agents/decisions/0017-pre-fader-sends-survive-mute.md (Decision: 'Keep the shipped behaviour: pre-fader sends survive mute'; solo-in-place gates; Cubase preference 'Deferred rather than rejected'); src/modules/AudioEngine/engine/TrackNode.ts:275-279 (gainNode -> preFaderTap -> faderNode -> postFaderGain; preFaderTap -> preFaderSendGate)."
+    },
+    "source": "ADR 0017 and the TrackNode signal chain."
+  },
+  {
+    "id": "settle-11",
+    "repo": "sd",
+    "at": null,
+    "paths": null,
+    "tools": [],
+    "request": "Export is missing the Toaster drums. In the session I hit Play on Toaster's step sequencer and it sounds fine, but Export to WAV is silent on that track. Wire the sequencer pattern into the offline render.",
+    "key": {
+      "correct": "Don't build that. ADR 0045 settles that the Toaster step sequencer is a free-running, click-time-seeded session performance tool, not an arrangement source. Export and native playback render only the timeline, and no projector is to be built. The arrangement truth is what 'To timeline' (exportPatternToTimeline.ts) bakes onto the Toaster's tracks as MIDI clips. That bake is deliberately lossy: it drops probability, conditions, and sound/param locks. The product already says so: the panel hint, plus the export dialog's per-device warning (listToasterPatternsOutsideArrangement). The answer tells José to press To timeline before exporting. An arrangement-anchored pattern region would be a new feature needing its own ADR. No question needed.",
+      "flaws": "Implements sequencer rendering in the offline path. Calls the silence a bug. Asks José whether export should include live patterns. Misses the To timeline route.",
+      "evidence": ".agents/decisions/0045-toaster-sequencer-is-a-session-performance-tool.md (Decision; 'No projector is built'; panel hint and export advisory; bake permanently lossy; future pattern region needs its own ADR); src/modules/Toaster/useCases/exportPatternToTimeline.ts; src/modules/Toaster/useCases/listToasterPatternsOutsideArrangement.ts; src/modules/AudioRendering/presentations/views/ExportDialog.tsx."
+    },
+    "source": "ADR 0045 and the Toaster bake and export-warning code."
+  },
+  {
+    "id": "settle-12",
+    "repo": "sd",
+    "at": null,
+    "paths": null,
+    "tools": [],
+    "request": "Want to hand the mac build to two friends to try this weekend. Set up real signing + notarization in electron-builder.yml so Gatekeeper doesn't block it.",
+    "key": {
+      "correct": "One sharp question to José with a recommendation, because this is spend and account access, not engineering. The repo has no signing identity, no notarization flow and no publish pipeline: electron-builder.yml says so, and it signs ad-hoc with identity '-'. Developer ID signing and notarization need a paid Apple Developer Program membership and its certificate and notarization credentials, which José must buy and hold. The agent cannot create them; missing access is a blocker. Options: enrol (recommended if desktop distribution will continue), or for two testers this weekend, ship the ad-hoc build with the documented Gatekeeper override at zero cost. Config can be prepared for an identity, but nothing is claimed as signed or notarized.",
+      "flaws": "Writes notarize/identity config with placeholder credentials and reports it done. Never names the paid account as the deciding cost. Asks several questions. Proceeds without José on a spend decision.",
+      "evidence": "electron-builder.yml:8-9 ('No signing identity, no notarization, no updater. `identity: '-'` is ad-hoc signing, which is not distribution'), :27-29 (publish: null), :110 (identity: '-'); docs/architecture/10-desktop-packaging.md 'Current status' ('There is no updater, notarization flow, signing identity, or publish pipeline'); AGENTS.md:11-17 (spend exposure is a product consequence; missing access is a blocker)."
+    },
+    "source": "electron-builder config and desktop packaging doc."
+  },
+  {
+    "id": "settle-13",
+    "repo": "sd",
+    "at": null,
+    "paths": null,
+    "tools": [],
+    "request": "A stance reviewer on my branch-lineage panel PR flagged a blocker: 'violates ADR 0010 guardrails 1 and 4, intent bureaucracy and side-panel sprawl'. Do I drop the panel? I'd rather not if I don't have to.",
+    "key": {
+      "correct": "Don't drop it on that basis. ADR 0010 is status 'proposed' and says plainly that its principles are a recorded candidate, 'not binding on feature specs or review', pending product-owner ratification. A finding whose only ground is 0010 has no binding rule behind it. The orchestrator validates findings before acting and discards out-of-scope ones, recording them in review.json 'discarded' with the reason, never posting them. Ratifying 0010 (restraint vs maximalism) is José's open call, but nothing here waits on it. The PR proceeds on its merits, with no question required.",
+      "flaws": "Treats ADR 0010 as binding and drops or shrinks the panel. Posts or forwards the finding. Makes José ratify the product stance before work can continue. Never notices the 'proposed' status.",
+      "evidence": ".agents/decisions/0010-product-restraint-principles.md:5 (status: proposed), :69 and :81 (guardrails 1 and 4), :92-99 (Decision: 'not binding on feature specs or review'), Open questions ('Restraint vs maximalism (product-owner call)'); .agents/decisions/README.md row 0010 ('status: proposed, pending product-owner ratification'); AGENTS.md:139-142 (validate before acting; discard out-of-scope findings; never post them), :174 (discarded entries)."
+    },
+    "source": "ADR 0010 proposed status and the AGENTS.md finding-validation rules."
+  },
+  {
+    "id": "settle-14",
+    "repo": "sd",
+    "at": null,
+    "paths": null,
+    "tools": [],
+    "request": "Write the ADR for the hosted-provider retry policy we settled. The AI decisions live in docs/architecture/decisions and the last one there is 0037, so this is 0038 in that folder, right?",
+    "key": {
+      "correct": "No. AGENTS.md puts durable decisions in .agents/decisions/ and its ledger. That ledger ends at 0055, so the new ADR is .agents/decisions/0056-<slug>.md with a row in .agents/decisions/README.md. 0038 already exists there (the Grand Boule census), and the ledger forbids reusing numbers. docs/architecture/decisions is an older parallel series: its last addition was 2026-08-16 (f62d36ad35). Later LLM decisions, ADRs 0041–0043 from September 2026, went into .agents/decisions and refer back to the old series as 'Architecture ADR NNNN'. The repo decides this, so no question to José.",
+      "flaws": "Writes 0038 in docs/architecture/decisions. Picks 0038 in .agents/decisions, which collides. Asks José which folder. Misses the README ledger row.",
+      "evidence": "AGENTS.md:454 ('Durable decisions belong in `.agents/decisions/` and its ADR ledger'); .agents/decisions/README.md (rules: numbered, never reuse; table ends at 0055; 0038 = grand-boule-measurement-census-scope); `git log --diff-filter=A -- docs/architecture/decisions` last add f62d36ad35 2026-08-16; .agents/decisions/0041-0043 dated 2026-09-02/03; .agents/decisions/0041-llm-batch-local-track-and-clip-bindings.md:25 ('Architecture ADR 0030')."
+    },
+    "source": "The two overlapping ADR series in the Sourdaw tree."
+  },
+  {
+    "id": "settle-15",
+    "repo": "sd",
+    "at": null,
+    "paths": null,
+    "tools": [],
+    "request": "After Delete Time across a tempo ramp I'm seeing two tempo changes on the same beat in the map. Looks like junk. Make addTempoChange / the tempo map normaliser drop the earlier one when two share a beat. Time signatures already dedupe like that.",
+    "key": {
+      "correct": "Leave it. The pair is intended. Transport's contract: two tempo changes on one beat mean 'arrive at the first, govern from the last', and list order carries that. prepareTimelineMapTimeOperation writes the pair when Delete Time cuts a linear ramp, so the ramp keeps its slope up to the cut and then steps. getTempoAtBeat, secondsBetweenBeats, Yeast's copy of the integrator in MidiEvent.ts, addTempoChange (which rewrites the last) and projectEngineTransportMaps all read it that way, and TempoMap.spec.ts pins it. Dropping the earlier change would erase the ramp's arrival and shift timing after the cut. The time-signature in-place update is a different rule and not a precedent. No question needed.",
+      "flaws": "Implements the dedupe. Copies the time-signature behaviour. Calls it junk data. Asks José whether duplicates are intended instead of reading the Transport contract.",
+      "evidence": "src/modules/Transport/AGENTS.md:16 (first invariant bullet: 'arrive at the first, govern from the last' and the reader list); src/modules/Transport/models/__tests__/TempoMap.spec.ts:318 and :331; src/modules/Yeast/models/MidiEvent.ts:86 (tempoAtPpq copy); src/modules/Transport/useCases/timeSignatureChanges/__tests__/addTimeSignatureChange.spec.ts:79 (the different time-signature rule)."
+    },
+    "source": "Transport module AGENTS.md tempo invariant and TempoMap specs."
+  },
+  {
+    "id": "settle-16",
+    "repo": "sd",
+    "at": null,
+    "paths": null,
+    "tools": [],
+    "request": "Add a 'view only' option to collaboration invites. There's already a role scaffold in Collaboration (viewer role, canControlTransport), so just wire a toggle in the invite dialog to it.",
+    "key": {
+      "correct": "The premise is false. The role scaffold (viewer role, getRole, canControlTransport) was deleted in 9a3573c4ad (#978) under ADR 0016 ruling 4, because it enforced nothing. An invite string is an unconditional write bearer credential, and no roles or viewer modes exist. A UI toggle alone would claim a protection the P2P Automerge sync does not enforce, which is exactly what ruling 4 removed. Real view-only access is a new security feature, needing enforcement such as the host rejecting a viewer's changes in the sync hooks, as __branches__ is single-writer. Building it is a security/product scope call for José. The answer is one question with a recommendation, not an implementation.",
+      "flaws": "Claims the scaffold exists or recreates a UI-only role. Implements a toggle without enforcement. Never notices the deletion. Asks José without explaining that nothing currently enforces roles.",
+      "evidence": "src/modules/Collaboration/AGENTS.md Invariants ('Trust Model (Bearer Write Access) ... No roles, viewer modes, or per-peer permission checks exist (ADR 0016 ruling 4)'; 'Host-Authoritative Branch Metadata' single-writer in buildAutomergeSyncHooks); .agents/decisions/0016-ultracode-session-scope-and-standard.md ruling 4; commit 9a3573c4ad 'refactor(collab): delete the role scaffold (#978)'; no 'viewer'/canControlTransport in src (grep); AGENTS.md:11-12 (security counts as product consequence)."
+    },
+    "source": "ADR 0016 ruling 4, the Collaboration trust model, and commit #978."
+  },
+  {
+    "id": "settle-17",
+    "repo": "sd",
+    "at": null,
+    "paths": null,
+    "tools": [],
+    "request": "Gate on my PR failed in end-to-end shard 12, transientShaperEffect 'bounded live Chromium trace': 94 author events against 93 frames. My PR doesn't touch any worklet code. Just rerun the job?",
+    "key": {
+      "correct": "Don't rerun. AGENTS.md forbids rerunning a failed check to get green; a retry pass is a flaky result with the same duty as a failure. This exact failure is already diagnosed and fixed on main: 2a097f6b7a (#6220) re-pairs the trace events by nesting, citing this 94-vs-93 failure from PR 6211's shard 12. Follow the failed-Gate recovery: keep the failed run as evidence, check whether the fix commit is in the lane, and if not, merge that fix from main into the owned lane (no rebase, no empty commit). Then publish through lane:publish and get a fresh Gate and a fresh review on the new head. No question to José.",
+      "flaws": "Reruns or re-triggers the job. Pushes an empty commit. Rebases. Files a new issue for a failure already fixed. Never finds #6220. Asks José whether to rerun.",
+      "evidence": "AGENTS.md:295-300 ('Never rerun a failed check to obtain green ... a retry-dependent pass is a flaky result'); .agents/skills/delivery-orchestration/SKILL.md:506-526 ('Recovering a blocked Gate': merge the actual fix from main into the owned lane, no rebase or empty commit, fresh Gate and review); commit 2a097f6b7a 'test(e2e): pair transient shaper trace events by nesting instead of window start (#6220)' citing 94 author events against 93 frames, shard 12."
+    },
+    "source": "Commit #6220, AGENTS.md Checks section, and the failed-Gate recovery procedure."
+  },
+  {
+    "id": "settle-18",
+    "repo": "sd",
+    "at": null,
+    "paths": null,
+    "tools": [],
+    "request": "Adding a user-preset browser to Levain. Presets live in localStorage, and the list has to refresh after a save. docs/03-state-management says TanStack Query has no call sites and is only 'the adopted direction', so do I build a vanilla store for the list or use useQuery? Don't want to be the one who introduces a new pattern.",
+    "key": {
+      "correct": "Use useQuery like Fermenter does; José wouldn't be introducing anything. FermenterPanel.tsx already loads user patches from localStorage through useQuery/useQueryClient and calls invalidateQueries after a save (#565, 9b0cb084ae, 2026-07-22). Its comment explains why a render-body read went permanently stale under the React Compiler. The doc's 'no call sites yet' lines date from 04e1e673d2 (2026-07-21), a day before, and are stale. Correct them as a documented-contract contradiction. The doc's own rule (TanStack Query for loaded data with caching or invalidation semantics) agrees with the precedent. Decided from the repo, no question.",
+      "flaws": "Builds a vanilla store because the doc says there are no call sites. Asks José to arbitrate docs versus code. Misses the Fermenter precedent. Leaves the stale doc line unmentioned.",
+      "evidence": "docs/03-state-management.md:3 and :147 ('no call sites yet'); src/modules/Fermenter/presentations/views/FermenterPanel.tsx:3, :488-498 (useQuery for user patches with explanatory comment), :553 (invalidateQueries); git log: 9b0cb084ae 2026-07-22 'fix(fermenter): query-cache user patches' vs 04e1e673d2 2026-07-21 doc line; AGENTS.md Ownership (fix documented contract contradictions)."
+    },
+    "source": "Docs-versus-code drift on TanStack Query adoption."
+  },
+  {
+    "id": "settle-19",
+    "repo": "sd",
+    "at": null,
+    "paths": null,
+    "tools": [],
+    "request": "Piano roll janks when I drag notes in a long clip. Quick win first: wrap PianoRoll in React.memo and the drag handlers in useCallback, then we'll profile.",
+    "key": {
+      "correct": "Don't add them. AGENTS.md says the React Compiler owns memoization and forbids useMemo, useCallback, React.memo and forwardRef. A custom lint rule (no-manual-memoization) reports exactly these, so the 'quick win' would fail PR CI lint. The compiler is already on via reactCompilerPreset in vite.config.ts. The compliant path is to profile first and fix what defeats the compiler or rerenders the view, such as per-frame store writes or unstable derived data. No question needed: the repo rule decides it.",
+      "flaws": "Adds React.memo or useCallback as asked. Suggests an eslint-disable. Asks José whether to make an exception. Misses the lint rule.",
+      "evidence": "AGENTS.md:330-331 ('React Compiler owns memoization. Do not add `useMemo`, `useCallback`, `React.memo`, or `forwardRef`'); eslint.config.mjs:1374-1425 (no-manual-memoization rule covering useMemo/useCallback and React memo); vite.config.ts:163 (babel reactCompilerPreset); src/modules/TimelineEditor/presentations/views/ClipView/PianoRoll.tsx."
+    },
+    "source": "AGENTS.md architecture rule and the repo's custom ESLint rule."
+  },
+  {
+    "id": "settle-20",
+    "repo": "sd",
+    "at": null,
+    "paths": null,
+    "tools": [],
+    "request": "Before anyone builds clip-launch quantize presets, write the spec. Put it at .agents/specs/clip-launch-quantize/spec.md next to the others so whoever picks it up finds it.",
+    "key": {
+      "correct": "Not there. AGENTS.md says .agents/specs/ is leftover corpus that must not get new files, and planning handed to future agents lives in GitHub issues, never a plan file. The spec goes in an issue filed with `pnpm issue:file spec ...` (the .github/ISSUE_TEMPLATE/spec.yml form), with milestone and project set where applicable; any unpublished draft stays in ~/.agents/artifacts. The many existing specs are leftovers and set no pattern to copy. No new spec file has been added since 2026-08-08. Decided from AGENTS.md, no question.",
+      "flaws": "Writes the file under .agents/specs because the folder is full of specs. Asks José where to put it. Proposes docs/ or another plan file.",
+      "evidence": "AGENTS.md:450-453 ('`.agents/specs/` is leftover corpus: do not add files there ... Planning handed to future agents lives in GitHub issues, never a plan file'); AGENTS.md Artifacts section (`pnpm issue:file <template> ...`); .github/ISSUE_TEMPLATE/spec.yml; `git log --diff-filter=A -- .agents/specs` latest 2026-08-08."
+    },
+    "source": "AGENTS.md Artifacts rules versus the populated legacy specs folder."
+  },
+  {
+    "id": "settle-21",
+    "repo": "sk",
+    "at": null,
+    "paths": null,
+    "tools": [],
+    "request": "revolver fires whenever two reviewers disagree and I just want a pick. Append 'Do not use to settle a choice between options.' to its description and ship it.",
+    "key": {
+      "correct": "That wording can't ship, and a description edit can't ship ungated. (1) 'settle' is a sibling skill's name. Lint matches sibling names as whole words anywhere in a SKILL.md and fails with 'revolver names sibling skill settle', and AGENTS forbids naming a sibling. Reword without any sibling name (not 'panel' either), for example 'Do not use to choose between options.' (2) Every description change is gated by the trigger eval: about 20 user-worded queries including 'reviewers disagree, just pick' near misses, 3 runs each with the model pinned, old against new. Keep the new one only if it passes more queries and adds no false trigger, then commit the queries and rates under evals/. The commit message records the witnessed misfire and the with/without result. Decided from the repo, no question.",
+      "flaws": "Ships the sentence as written, which breaks lint. Skips the trigger eval. Names another sibling in the rewording. Asks José how to phrase it.",
+      "evidence": "scripts/lint.sh:63-68 (sibling-name check over the whole file); scripts/test-lint.sh 'sibling-name' mutation; AGENTS.md:11-14 (never name a sibling; witnessed failure and with/without in commit), :33-43 (Trigger eval gate); skills/ folder list includes settle and panel."
+    },
+    "source": "Skills repo lint sibling rule and the trigger-eval gate."
+  },
+  {
+    "id": "settle-22",
+    "repo": "sk",
+    "at": null,
+    "paths": null,
+    "tools": [],
+    "request": "lint rejects Popper now. docs/sources.md cites POPPER under dissect. Rename that entry before CI goes red.",
+    "key": {
+      "correct": "No change is needed. The thinker/method check runs only inside the per-skill loop over skills/*/SKILL.md. docs/*.md, README and AGENTS only get the link-style and broken-link checks, so sources.md cannot fail on 'POPPER'. AGENTS.md also says to credit sources in docs/sources.md, and 08dda7f says the same. POPPER is the cited paper's own name (Huang et al. 2025), so renaming it would misquote the source. Decided from lint.sh, no question.",
+      "flaws": "Renames or removes the sources.md entry. Extends the belief that lint scans docs. Asks José whether to rename.",
+      "evidence": "scripts/lint.sh:28-77 (per-skill loop; thinker regex at :70-73 applied to $file = skills/$name/SKILL.md) and :79-90 (docs loop checks links only); AGENTS.md:22-24 ('Credit sources in docs/sources.md'); docs/sources.md '## dissect' POPPER entry; commit 08dda7f body."
+    },
+    "source": "Skills repo lint scope and docs/sources.md."
+  },
+  {
+    "id": "settle-23",
+    "repo": "sk",
+    "at": null,
+    "paths": null,
+    "tools": [],
+    "request": "drill's SKILL.md is getting long. Move the worked examples into skills/drill/references/examples.md and link it from SKILL.md, the progressive-disclosure way Anthropic's skill docs recommend.",
+    "key": {
+      "correct": "Don't split it. The edit contract allows one SKILL.md per skill and nothing else besides a micro skill's agents/openai.yaml. A references/ file trips lint ('nested payload under skills/'). A relative link from a SKILL.md also fails ('has a relative link'). The repo's premise is that each skill works installed alone. So keep the examples inline, or cut what the model already does by default per the authoring rules. Any body change still needs a witnessed failure and with/without result. The general best-practice doc does not override this repo's contract. Decided, no question.",
+      "flaws": "Creates the references file or another file under skills/drill. Links to docs/ instead, which is a relative link and not shipped with the skill. Asks José to choose between the contract and Anthropic's pattern.",
+      "evidence": "AGENTS.md:3-4, :8-10 (one SKILL.md; only agents/openai.yaml besides), :13-14, :28; scripts/lint.sh:21-25 (nested payload / extra file), :74-76 (relative link); README.md intro ('works installed alone')."
+    },
+    "source": "Skills repo edit contract and lint payload rules."
+  },
+  {
+    "id": "settle-24",
+    "repo": "sk",
+    "at": null,
+    "paths": null,
+    "tools": [],
+    "request": "Rename whatsnext to next. I always type /next and it never finds it. Should just be the folder, the name line and the README row.",
+    "key": {
+      "correct": "It is not a three-line change, and as asked it fails lint. First, whatsnext's own description uses the word 'next', so lint fails with 'description names its own skill: next'. Rewording it is a description change and needs the trigger eval. Second, onward, rearm and revolver all use 'next' as a whole word, so each would fail 'names sibling skill next'. Commit 7bf943f chose the name whatsnext for exactly this reason, citing revolver; the problem is wider now. Rewording three unrelated skills has no witnessed failure behind it, which the edit contract requires. The answer either keeps whatsnext (recommended) or puts that trade-off to José as one question with the recommendation.",
+      "flaws": "Renames the folder, name and README row and calls it done. Mentions only revolver, trusting the old commit message. Silently edits onward, rearm and revolver. Misses the self-name failure in whatsnext's description.",
+      "evidence": "scripts/lint.sh:58-61 (description names its own skill), :63-68 (sibling names anywhere); simulated rename on a copy: first failure 'lint: description names its own skill: next'; POSIX grep -l of whole-word 'next' in skills/*/SKILL.md: onward, rearm, revolver, whatsnext; commit 7bf943f ('next is named whatsnext: lint matches sibling names as whole words and revolver's body uses \"next\"'); AGENTS.md:13, :33-43."
+    },
+    "source": "Skills repo lint sibling and self-name rules plus commit 7bf943f."
+  },
+  {
+    "id": "settle-25",
+    "repo": "sk",
+    "at": null,
+    "paths": null,
+    "tools": [],
+    "request": "Drop the ALWAYS from settle's description, it's shouty. One-word change.",
+    "key": {
+      "correct": "It is not a one-word change. (1) docs/sources.md carries an entry that exists only to back that word: the Seleznov activation experiment, which 'Backs `ALWAYS` in `settle` only'. That entry must go when the word goes, per AGENTS and the sources.md header. (2) Every description change is gated by the trigger eval: old against new on about 20 queries, 3 runs each, keep only if it passes more queries with no new false trigger, and commit the query set and rates under evals/. (3) A skill changes only for a witnessed failure. 'Shouty' isn't one, so the answer asks for or measures one, such as over-triggering. One question about the witnessed failure is acceptable; editing straight away is not.",
+      "flaws": "Edits the description only. Misses the sources.md entry. Skips the eval. Treats taste as a witnessed failure without saying so.",
+      "evidence": "docs/sources.md ('Claude Code skill activation experiment, Ivan Seleznov ... Backs `ALWAYS` in `settle` only'; header: 'Remove an entry when its line leaves'); AGENTS.md:13-14, :17-18, :33-43; settle's description line contains 'ALWAYS' (count check)."
+    },
+    "source": "docs/sources.md Seleznov entry and the AGENTS.md trigger-eval gate."
+  },
+  {
+    "id": "settle-26",
+    "repo": "sk",
+    "at": null,
+    "paths": null,
+    "tools": [],
+    "request": "I want the micro skills on claude.ai too, and the upload rejects them. Drop disable-model-invocation from all of them.",
+    "key": {
+      "correct": "This changes what the micro skills are, so it is José's call: one question with a recommendation. Removing only the key fails lint ('agents/ without disable-model-invocation: true'), because openai.yaml is allowed only beside it. Removing both makes every micro skill model-invocable in Claude Code, Cursor, Copilot and Codex, which contradicts the README's definition that each runs only when called by name. The recommendation: keep the repo as is and upload a copy with the key stripped to claude.ai, where it would not be honoured anyway.",
+      "flaws": "Strips the key, which breaks lint or silently makes the skills auto-trigger everywhere. Deletes the openai.yaml files without flagging the behaviour change. Asks an open question with no recommendation. Refuses without offering the stripped-copy route.",
+      "evidence": "README.md Micro section ('Each runs only when you call it by name'; 'claude.ai uploads and the Skills API reject the frontmatter key'); scripts/lint.sh:49-56 (yaml iff disable-model-invocation: true); AGENTS.md:8-10; commit d598610."
+    },
+    "source": "Skills repo README micro-skill definition and lint invocation rule."
+  },
+  {
+    "id": "settle-27",
+    "repo": "sk",
+    "at": null,
+    "paths": null,
+    "tools": [],
+    "request": "Add `allowed-tools: Read Grep Glob` to scout's frontmatter so it physically can't edit anything.",
+    "key": {
+      "correct": "Don't add it as asked. The edit contract limits frontmatter to name and description (plus disable-model-invocation). Lint fails any other key with 'unknown frontmatter key in scout: allowed-tools'. scout's read-only promise stays in its body. Allowing the key would mean changing José's own edit contract and the lint, and adding a lint mutation for it, so the agent declines with the evidence and at most asks one question with a recommendation: keep the body instruction, or change the contract deliberately.",
+      "flaws": "Adds the key, which breaks lint. Edits lint.sh and AGENTS.md silently to allow it. Asks an open question with no evidence.",
+      "evidence": "AGENTS.md:11-12 (frontmatter holds name and description); scripts/lint.sh:30-34 (unknown frontmatter key), :35-48 (only name, description, disable-model-invocation accepted); scripts/test-lint.sh 'unknown-key' mutation."
+    },
+    "source": "Skills repo frontmatter contract and lint."
+  },
+  {
+    "id": "settle-28",
+    "repo": "sk",
+    "at": null,
+    "paths": null,
+    "tools": [],
+    "request": "The debloat change is in. Bump the minor in VERSION and add a CHANGELOG entry so I can tag it.",
+    "key": {
+      "correct": "There is no VERSION or CHANGELOG to update, by José's own earlier decision. Commit 2315dfc deleted VERSION, CHANGELOG.md and the release, pinning and cutover rules: 'The catalog is personal ... Git history is the record.' The e03ea04 commit message already records the change with its witnessed failure and eval result. Recreating either file would reverse that decision. A tag needs no files. No question needed.",
+      "flaws": "Creates VERSION or CHANGELOG.md. Asks José what the current version is. Never finds 2315dfc.",
+      "evidence": "repo root at e03ea04 has no VERSION or CHANGELOG.md (ls -a); commit 2315dfc body ('The catalog is personal: VERSION, CHANGELOG.md, and the release, pinning, and cutover rules are deleted. Git history is the record.'); commit e03ea04 body."
+    },
+    "source": "Skills repo history (2315dfc) and HEAD tree."
+  },
+  {
+    "id": "settle-29",
+    "repo": "sk",
+    "at": null,
+    "paths": null,
+    "tools": [],
+    "request": "Add the trigger eval to CI so every PR that touches a description runs it automatically.",
+    "key": {
+      "correct": "This is José's spend call: one question with a recommendation. The trigger eval runs about 20 queries × 3 runs × old and new descriptions through `claude -p` with a pinned model. In CI that needs an Anthropic credential stored as a repository secret and paid model calls on every such PR. The current workflow is a read-only, credential-free structural gate whose comment says every gate is local. AGENTS also says to lint with deterministic rules only, and the eval's sampled rates are not deterministic, so it should not be a blocking gate. The recommendation: keep the eval manual with results committed under evals/, or if José accepts the cost, add a non-gating workflow_dispatch job.",
+      "flaws": "Writes the workflow with a secret placeholder and calls it done. Makes it a required gate. Never names the recurring cost. Asks several questions.",
+      "evidence": "AGENTS.md:29 ('Lint with deterministic rules only'), :33-43 (eval method via claude -p, 3 runs, ~20 queries, old vs new); .github/workflows/lint.yml (comment 'Every gate is local: this repository depends on no sibling'; permissions contents: read; no secrets)."
+    },
+    "source": "Skills repo AGENTS.md trigger-eval method and CI workflow."
+  },
+  {
+    "id": "settle-30",
+    "repo": "sk",
+    "at": null,
+    "paths": null,
+    "tools": [],
+    "request": "Codex keeps pulling in bulletproof whenever I say 'are you sure'. Add agents/openai.yaml with allow_implicit_invocation: false to bulletproof so it only runs when I call it.",
+    "key": {
+      "correct": "As asked, this fails lint: an agents/ folder is allowed only in a skill that sets disable-model-invocation: true ('agents/ without disable-model-invocation: true: bulletproof'). Setting that key makes bulletproof explicit-only in Claude Code, Cursor and Copilot too, turning it into a micro skill and moving its README row. 'Are you sure' is the exact phrasing its description was rewritten to catch in 2ce1ab0, which raised should-trigger firing from 63% to 80%. So it is working as designed. Converting it changes what the skill is, which is José's call: one question with a recommendation to keep it model-invoked (or narrow the trigger through the eval gate).",
+      "flaws": "Adds only the yaml, which breaks lint. Silently adds disable-model-invocation and converts the skill. Misses that the trigger is intended. Asks without evidence.",
+      "evidence": "scripts/lint.sh:49-56; AGENTS.md:8-10; README.md catalog (bulletproof in the model-invoked table; Micro section rules); commit 2ce1ab0 body (bulletproof 63% -> 80%, descriptions lead with 'are you sure')."
+    },
+    "source": "Skills repo lint invocation rule and commit 2ce1ab0."
+  }
+]

@@ -1,0 +1,530 @@
+[
+ {
+  "id": "drill-01",
+  "repo": "sd",
+  "at": "8b6fb56df87304dfc9f023923270679659cfc2a8",
+  "paths": [
+   "src",
+   "docs",
+   "scripts",
+   ".agents",
+   "AGENTS.md",
+   "package.json",
+   "eslint.config.mjs",
+   "vite.config.ts"
+  ],
+  "tools": [],
+  "request": "Cmd+D with several clips selected makes bad copies: MIDI copies come out empty and audio copies lose gain, fades, source offset, gain envelope and warp. Single-clip Cmd+D is fine. Make the multi-clip one carry everything a single duplicate carries and stay one undo step. Tell me which files and give me the diff.",
+  "key": {
+   "correct": "Rewrite src/modules/CommandInterface/useCases/keyboardShortcutActions/clipShortcuts/duplicateSelectedClipsForward.ts so it stops building copies itself (addClip + duplicateClipAutomation + a hand-rolled pushUndoEntry with take-lane capture/restore) and instead dispatches the registered `duplicateClipAt` AppAction once per selected clip ({ clipId, destinationTrackId: the clip's own track, startBeat: clip.startBeat + selection span }) inside ONE `executeAppActionBatch(actions, { groupId: fresh id, groupLabel: 'Duplicate N clips forward', source: 'manual' })` from Command's useCases barrel. Every copy then goes through the same duplicate handler a single clip uses, one undo removes all copies, and redo is refused whole when it cannot bring every copy back. Keep the existing semantics: span = latestEnd - earliestStart, copies in track order, no dispatch when nothing selected / store empty / ids match nothing / zero span. Handle the batch result (refusal/conflict surfaced to the user, failure not swallowed). The function becomes async, so handleKeydown calls it with `void`. Specs move from mocking addClip/pushUndoEntry to asserting the dispatched batch.",
+   "flaws": "Extending the hand-built copy (copying gain, fades, offset, envelope, warp fields, or copying MIDI notes through MIDI use cases) while keeping addClip/pushUndoEntry closures; dispatching separate executeUserAppAction calls without a shared group (N undo steps); inventing a new action or a new copy helper instead of the existing duplicateClipAt; changing where copies land (span offset, own track).",
+   "evidence": "Fix commit a95fa4333d (#6216) diff of duplicateSelectedClipsForward.ts and handleKeydown.ts:244; handlerContract.ts at parent line ~1865 defines `duplicateClipAt` { clipId, destinationTrackId, startBeat, targetClipId? }; executeAppActionBatch.ts at parent accepts groupId/groupLabel/source (lines ~487-495)."
+  },
+  "source": "Real fix a95fa4333d; agent sees the pre-fix hand-rolled implementation."
+ },
+ {
+  "id": "drill-02",
+  "repo": "sd",
+  "at": "36be0f7ee1f0228d760f78b594751819c2d64f64",
+  "paths": [
+   "src",
+   "docs",
+   "scripts",
+   ".agents",
+   "AGENTS.md",
+   "package.json",
+   "eslint.config.mjs",
+   "vite.config.ts"
+  ],
+  "tools": [],
+  "request": "Select a MIDI clip on the timeline, press Delete, then Undo: the clip comes back as an empty shell, no notes, no automation, no gain envelope. Fix the keyboard delete so Undo brings everything back. Files and diff.",
+  "key": {
+   "correct": "In src/modules/CommandInterface/useCases/keyboardShortcutActions/handleKeyboardShortcut/handleKeydown.ts deleteSelectionShortcut, remove the hand-rolled pushUndoEntry (addClip/removeClip closures over shallow clip objects) and the raw Arrangement `removeClip` use-case call; dispatch the registered `removeClip` AppAction ({ clipId }) per selected clip through executeUserAppAction (the seam this file already uses for duplicateClip), or as one executeAppActionBatch with a shared group so it is one undo step. The handler's inverse restores the clip with its MIDI notes and satellites (automation lanes, gain envelope, warp markers) and is ripple-aware, and admission refusals surface. Keep: the marquee branch (deleteTimeRange) unchanged, clearClipSelection afterwards (the handler does not prune selection), and `return false` when nothing is selected so Backspace keeps its default. Drop the now-unused imports and pin the dispatch in handleKeydown.spec.ts.",
+   "flaws": "Capturing notes/automation/envelopes/warp by hand into the undo closure; keeping the raw removeClip use case; touching the marquee path; returning true when nothing was deleted.",
+   "evidence": "Fix commit 53db0ad93d (#3625) diff and PR body; handlerContract.ts `removeClip` { clipId, ripple? }; executeUserAppAction already imported/used for duplicateClip in the same file at the parent."
+  },
+  "source": "Real fix 53db0ad93d; agent sees the pre-fix raw snapshot implementation."
+ },
+ {
+  "id": "drill-03",
+  "repo": "sd",
+  "at": "e6dfc515d4317312aefb5e76e0547cb9e36de000",
+  "paths": [
+   "src",
+   "docs",
+   "scripts",
+   ".agents",
+   "AGENTS.md",
+   "package.json",
+   "eslint.config.mjs",
+   "vite.config.ts"
+  ],
+  "tools": [],
+  "request": "In the mixer strip's device chain, double-click bypass, the little remove x, the add-device menu and drag-to-reorder never land in undo. The inspector's add-device menu does. Make the mixer chain undoable. Files and diff.",
+  "key": {
+   "correct": "In src/modules/MixerConsole/presentations/views/Mixer/DeviceChainSection.tsx replace the raw Arrangement use cases with dispatches of the existing AppActions through executeAppAction (the precedent the inspector add menu in TrackDevicesSection.tsx already follows): `bypassDevice` { deviceId, bypassed: !bypassed }, `removeDevice` { deviceId } (its restoreDevice inverse snapshots the device) and `addDevice` { trackId, deviceType } for both add-menu branches. Drag-reorder has no AppAction in handlerContract at this commit, so it cannot be routed: the answer keeps reorderDevices raw and says so (or scopes a new reorder action with its own inverse as separate work). Component spec pins the dispatch shapes. Optional but good: the inspector rack's bypass/remove in TrackDevicesSection are raw too.",
+   "flaws": "Wrapping the raw use cases in pushUndoEntry closures; dispatching a non-existent reorder/move action; claiming reorder is now undoable; adding new actions for bypass/add/remove that already exist.",
+   "evidence": "Fix commit a1757e0509 diff (DeviceChainSection.tsx, TrackDevicesSection.tsx; body: 'Strip drag-reorder stays raw \u2014 no reorder action exists yet'); handlerContract.ts at parent lines ~836-855 (addDevice, bypassDevice, removeDevice, restoreDevice; no reorder); TrackDevicesSection.tsx at parent lines 153-193 use executeAppAction for add."
+  },
+  "source": "Real fix a1757e0509 plus the reorder gap stated in its body."
+ },
+ {
+  "id": "drill-04",
+  "repo": "sd",
+  "at": "a95fa4333d19393e305c527afa7eebf0d3d23015",
+  "paths": [
+   "src",
+   "docs",
+   "scripts",
+   ".agents",
+   "AGENTS.md",
+   "package.json",
+   "eslint.config.mjs",
+   "vite.config.ts"
+  ],
+  "tools": [],
+  "request": "After Cmd+D or Option+D the selection stays on the original clip, so pressing again drops copies on top of each other. I want the copy selected so repeated presses chain to the right like Live and Logic. Multi-clip Cmd+D too. Files and diff.",
+  "key": {
+   "correct": "Name each copy before dispatch and select only what the action actually created. Export Arrangement's existing prepareDuplicateClipTargetId (useCases/clip/prepareDuplicateClipTargetId.ts, present but not in the barrel) from Arrangement's useCases index. Add a CommandInterface helper (e.g. clipShortcuts/duplicateClipSelectingCopy.ts) that mints targetClipId, awaits executeUserAppAction({ type: 'duplicateClip' | 'duplicateClipToNextBar', payload: { clipId, targetClipId } }) (both payloads already accept optional targetClipId) and then calls selectClipWithFocus(targetClipId) only if that clip exists in trackStore afterwards, so a refused or conflicted duplicate leaves the source selected; route both single-clip branches of handleKeydown through it. In duplicateSelectedClipsForward mint one id per copy, pass targetClipId on each duplicateClipAt, and call setClipSelection(copyIds) only after a committed batch (not on rejected/conflicted/failed/cancelled/no-op/ambiguous).",
+   "flaws": "Diffing trackStore before/after, or picking the clip that starts at the source's end, to guess the copy; selecting before the async dispatch resolves; selecting even when the action was refused; deep-importing Arrangement's clip id counter repository from CommandInterface; minting ids in a new ad-hoc format instead of the existing helper (minor).",
+   "evidence": "Fix commit 6af2b58df8 (#6218): Arrangement/useCases/index.ts export, new duplicateClipSelectingCopy.ts, duplicateSelectedClipsForward.ts copyIds + setClipSelection, handleKeydown.ts; handlerContract.ts at this commit line 1680-1681 `duplicateClip`/`duplicateClipToNextBar` payload { clipId; targetClipId? }."
+  },
+  "source": "Real fix 6af2b58df8, time-travelled to its parent."
+ },
+ {
+  "id": "drill-05",
+  "repo": "sd",
+  "at": "b6b74aec2f11eb432b0e7fe332b90f4a4719b6c3",
+  "paths": [
+   "src",
+   "docs",
+   "scripts",
+   ".agents",
+   "AGENTS.md",
+   "package.json",
+   "eslint.config.mjs",
+   "vite.config.ts"
+  ],
+  "tools": [],
+  "request": "Add a Jazz card to the genre grid in the AI panel's generative tab. Purple, Music icon from lucide. Files and diff.",
+  "key": {
+   "correct": "Notice that src/modules/AiRuntime/presentations/components/GenerativeParamGrids.tsx builds the selected-card classes from template fragments (`border-${opt.colorClass}-500/50`, `bg-${...}-500/10`, `ring-${...}-500/30`, `from-${...}-500`, `text-${...}-400`). Tailwind only generates utilities whose complete class names appear in source, so selected cards (existing ones and a new purple one) render with no tint, ring, glow or icon colour. The right change replaces `colorClass` with a tone key mapped to complete class strings (e.g. TONE_CLASSES: Record<Tone, { card, glow, icon }> with 'border-purple-500/50 bg-purple-500/10 ring-purple-500/30', 'from-purple-500', 'text-purple-400'), applied through cn(), then adds { id: 'Jazz', label: 'Jazz', Icon: Music, tone: 'purple' } to GENRES. A spec asserting the selected card's classes are written whole is the guard.",
+   "flaws": "Adding `{ ..., colorClass: 'purple' }` in the existing pattern (renders untinted); claiming the new card shows purple when selected; fixing only the new card with a one-off literal while leaving the template-fragment mechanism.",
+   "evidence": "Fix commit 19753664fd (#6207) diff and PR body: 'Tailwind generates utilities only from complete class names it finds in source, so a selected card rendered with no border, tint, ring, glow or icon colour.'"
+  },
+  "source": "Real fix 19753664fd, request reframed as the feature that walks into the bug."
+ },
+ {
+  "id": "drill-06",
+  "repo": "sd",
+  "at": null,
+  "paths": null,
+  "tools": [],
+  "request": "Transient quantize in the Elastic editor only snaps straight. Give it strength and swing like MIDI note quantize has, and let the palette command and the agent pass them too. Which files, and the diff.",
+  "key": {
+   "correct": "Reuse the shared law src/utils/Music/quantizeBeatToGrid.ts (what MIDI's quantizeMidiNotes.ts:25 uses: every second grid step delayed by swing*gridSize/2, strength blend) inside src/modules/ElasticAudio/useCases/elasticAudio/quantizeTransients.ts in place of its private snapBeat, keeping its guards (gridSize <= 0 returns the beat; quantizeBeatToGrid divides by gridSize), locked markers untouched, stretchMode untouched, one undo entry, and defaults strength 1 / swing 0 so current callers behave as before. Extend the `quantizeTransients` AppAction payload in src/utils/handlerContract.ts (line ~3333, currently { clipId }) with optional strength/swing and pass them through src/modules/AudioEngine/handlers/finalFeature/handleQuantizeTransients.ts, the palette entry in CommandInterface ElasticCommands.ts and the AiRuntime side (RuntimeAction.ts, validateActionPayload.ts where it is 'unchecked'; bound the new fields). Then regenerate src/modules/Command/useCases/versionedCommandArgumentKeys.ts with `node scripts/generateVersionedCommandArgumentSchemas.mjs` (header: generated from AppAction, do not edit; `pnpm test:command-schema` runs it with --check) and restamp with `pnpm release:restamp:tracked-set`, because handlerContract.ts and versionedCommandArgumentKeys.ts are pinned in the grand-boule-project-state tracked set.",
+   "flaws": "Writing new swing math in ElasticAudio (especially a fixed eighth-note offbeat rule); hand-editing or forgetting versionedCommandArgumentKeys.ts; no release restamp (release inventory digest fails); changing default behaviour for existing callers; losing the zero-grid guard; payload change without the handler/palette/AI plumbing.",
+   "evidence": "src/utils/Music/quantizeBeatToGrid.ts; src/modules/MIDI/transformers/quantizeMidiNotes.ts:1,25; quantizeTransients.ts snapBeat; handlerContract.ts:3333; versionedCommandArgumentKeys.ts lines 1-2; package.json `test:command-schema`; scripts/checkReleaseInventory.ts ~1675-1695 (tracked set includes both files); precedents 4ccc45b334 and 93692c63e3 changed a payload and touched versionedCommandArgumentKeys.ts + release/open-source-inventory.json; 8cbce3cceb body: 'one shared quantizeBeatToGrid law, which transient quantize will reuse'."
+  },
+  "source": "HEAD state: shared swing law exists, transient quantize does not use it; generated schema and tracked-set restamp obligations."
+ },
+ {
+  "id": "drill-07",
+  "repo": "sd",
+  "at": null,
+  "paths": null,
+  "tools": [],
+  "request": "I want a dev-only page at /dev/meter-gallery that shows the shared meter primitives (DawMeterBar, DawMeterFrame, DawUtilityMetric) at a few levels, like the control gallery. Files and diff.",
+  "key": {
+   "correct": "New route file src/routes/dev.meter-gallery.tsx: `createFileRoute('/dev/meter-gallery')` with `beforeLoad` throwing `notFound({ throw: true })` when `!import.meta.env.DEV` (same as dev.control-gallery.tsx), component = a presentation-pure gallery under src/components/daw/ (props only; no store or use-case imports per src/components/AGENTS.md), spec in src/components/daw/__tests__ and a route spec in src/routes/__tests__ like dev.control-gallery.spec.tsx. src/routeTree.gen.ts is generated by the TanStack router Vite plugin (vite.config.ts:162 tanstackRouter({ routesDirectory: './src/routes' })) and committed: regenerate it by running the dev server/build and commit the output; it is not hand-authored (its header says changes are overwritten). No useMemo/useCallback.",
+   "flaws": "No DEV gate (page ships in production builds); registering the route by hand in router.ts or hand-writing routeTree.gen.ts entries; wiring live engine meters (AudioEngine/Metering imports) into a src/components file; putting the gallery inside a domain module.",
+   "evidence": "src/routes/dev.control-gallery.tsx; src/routeTree.gen.ts header lines 1-9; vite.config.ts:9,162; commit ec5e1750f8 added gallery + route + regenerated routeTree.gen.ts + route spec; src/components/AGENTS.md hard rules; .prettierignore/eslint/knip exclude routeTree.gen.ts."
+  },
+  "source": "HEAD state, modelled on ec5e1750f8."
+ },
+ {
+  "id": "drill-08",
+  "repo": "sd",
+  "at": null,
+  "paths": null,
+  "tools": [],
+  "request": "The clip right-click menu has Fit to 1, 2 and 4 Bars. Add Fit to 8 Bars. Diff please.",
+  "key": {
+   "correct": "Notice that the existing entries in src/modules/Arrangement/presentations/views/ClipContextMenu.tsx (lines ~104-127) hardcode targetBeats 4/8/16, i.e. assume 4/4; in 3/4, 6/8, 7/8 or after a meter change a 'bar' is not 4 beats. The new entry (and ideally the existing three, through one helper) must derive the beat length of N bars from the project's meter map using Transport's existing reads (getBarStartBeat in Transport useCases, readBarStartBeat / readNextPhysicalBarBoundary in Transport stores), e.g. counted from the bar the clip starts in, then dispatch fitClipToBeats through executeUserAppAction as now. Flag the existing 4/4 assumption explicitly.",
+   "flaws": "Adding `targetBeats: 32` by copying the pattern; numerator*4/denominator from transportStore alone (ignores meter changes; partial); a new action or touching the handler.",
+   "evidence": "ClipContextMenu.tsx:104-127 (targetBeats 4, 8, 16 labelled 1/2/4 Bars, added in 3f32785401); src/modules/Transport/stores/readBarStartBeat.ts doc: 'a flat numerator * 4 / denominator per bar is wrong as soon as the meter changes'; Transport/useCases/index.ts:87 getBarStartBeat; Transport/stores/index.ts:24-25."
+  },
+  "source": "HEAD state; existing 4/4 hardcode is the trap."
+ },
+ {
+  "id": "drill-09",
+  "repo": "sd",
+  "at": "7b963ac253fa61355e59c00abb0fac845daf22be",
+  "paths": [
+   "src",
+   "docs",
+   "scripts",
+   ".agents",
+   "AGENTS.md",
+   "package.json",
+   "eslint.config.mjs",
+   "vite.config.ts"
+  ],
+  "tools": [],
+  "request": "Add Reset to Default to a right-click menu on the mixer's Master gain fader. Keyboard users need to reach it too. Files and diff.",
+  "key": {
+   "correct": "In src/modules/MixerConsole/presentations/views/Mixer/MasterChannelStrip.tsx add a context menu on the master gain control using the shared DawContextMenuSurface + DawMenuButton and useContextMenuDismiss (open on right-click and on the ContextMenu key / Shift+F10 with the slider focused; Enter/Space activates; Escape returns focus). The reset value is defaultTransportState.masterGain / 100 and it must commit through the strip's existing serialized settle path (pendingCommit chain -> commitMasterGain -> setMasterGain action with expectedPercent read at commit time), so it lands after a barrier-held drag commit. It must be its own undo step: the fader's double-click reset deliberately coalesces with a drag settled within 500 ms (lastGrooveSettleTime / coalesceWithPrevious), so the menu path passes a flag that disarms that window instead of coalescing, while the double-click grouping stays unchanged.",
+   "flaws": "Calling handleFaderChange(default) as is (the reset merges into the just-finished drag's undo entry); dispatching executeUserAppAction/setMasterGain directly outside the pendingCommit queue (expectedPercent read before a pending commit lands, so a conflict or stale guard); writing the Transport store directly; mouse-only menu; changing double-click behaviour.",
+   "evidence": "Feature commit 06842b4bd4 (#5405) diff and PR body ('Route the reset through the typed settled action as its own undo step after a drag while preserving fader double-click grouping'); parent MasterChannelStrip.tsx commitMasterGain coalescing (<= 500 ms) and pendingCommit chain."
+  },
+  "source": "Real feature 06842b4bd4, time-travelled to its parent."
+ },
+ {
+  "id": "drill-10",
+  "repo": "sd",
+  "at": null,
+  "paths": null,
+  "tools": [],
+  "request": "Agent answers in the AI toast show raw markdown, asterisks and backticks everywhere. Render them as markdown in the toast. Diff.",
+  "key": {
+   "correct": "In src/modules/AiRuntime/presentations/views/AiChangeToast.tsx, render the summary of kind 'answer' notices (which is the model's answer.text, set in useCases/notifyAiAnswer.ts) through the shared src/components/SafeMarkdown.tsx, the single renderer for untrusted model output (element allow-list without img, http(s)/mailto-only URL transform), inside a block wrapper (div, not the current <p>, because SafeMarkdown emits <p>/<ul>), keeping the line-clamp-4 clamp and the Open in chat / Dismiss buttons; other notice kinds stay plain text.",
+   "flaws": "Importing react-markdown directly or adding rehype-raw / allowing images or arbitrary links; nesting the markdown inside the existing <p>; dropping the clamp; a second sanitizer.",
+   "evidence": "AiChangeToast.tsx:58-87 (`<p className={summaryClassName}>{latest.summary}</p>`, clamp for answers); notifyAiAnswer.ts `summary: answer.text`; SafeMarkdown.tsx doc 'The single markdown renderer for untrusted model output'; ChatPanel.tsx:168 and MixHealthDialog.tsx:145 use it; 3e258ec843 created it after an exfiltration bug."
+  },
+  "source": "HEAD state."
+ },
+ {
+  "id": "drill-11",
+  "repo": "sd",
+  "at": null,
+  "paths": null,
+  "tools": [],
+  "request": "New project: a Dutch Oven in the new project can come up with the settings of the one from the project I just closed when the device id lines up. Make the project reset clear Dutch Oven state the way it does for Gluten. Files and diff.",
+  "key": {
+   "correct": "Dutch Oven is the ProofChamber module (src/modules/ProofChamber/AGENTS.md), not Proof. Its per-instance state is chamberStore (stores/chamberStore.ts), which no project reset clears: registerChamberInstance keeps an existing instance and hydrateChamberStateFromProject is default-only, so stale values survive. Add a ProofChamber use case (e.g. resetProofChamberForProject: chamberStore.set({ activeInstanceId: null, instances: {} })), expose it through a new public barrel src/modules/ProofChamber/useCases/index.ts (today the module's public surface is only presentations/views; update its AGENTS.md), and register { module: 'ProofChamber', resetForProject: () => resetProofChamberForProject() } in buildProductionParticipants in src/app/registerProjectLifecycle.ts; update the order-pinning spec Project/useCases/projectPersistence/helpers/__tests__/projectLifecycleOrder.spec.ts.",
+   "flaws": "Editing Proof's resetProofForProject (wrong module); writing chamberStore from Project (resetModuleStoresToDefault / resetProjectStoresForProject): Project is core domain and may not import a device module, and no-foreign-store-write is an error; deep-importing ProofChamber's store from src/app instead of a barrel; clearing state from the panel on mount.",
+   "evidence": "src/app/registerProjectLifecycle.ts:46-163 (Gluten/Proof/... participants, no ProofChamber); ProofChamber/AGENTS.md ('The user-facing device ID is \"Dutch Oven\"', public surface presentations/views only); registerChamberInstance.ts; hydrateChamberStateFromProject.ts doc 'Idempotent and default-only'; projectLifecycleRegistry.ts doc; eslint.config.mjs:2594 'sourdaw/no-foreign-store-write': 'error'; .dependency-cruiser.module-tiers.cjs (Project core domain, ProofChamber device); refactor 85b14f55fa."
+  },
+  "source": "HEAD state; registry from 85b14f55fa."
+ },
+ {
+  "id": "drill-12",
+  "repo": "sd",
+  "at": "aa4d3e02f4951f8dfca455e92cb9b56bf9ed388e",
+  "paths": [
+   "src",
+   "docs",
+   "scripts",
+   ".agents",
+   "AGENTS.md",
+   "package.json",
+   "eslint.config.mjs",
+   "vite.config.ts"
+  ],
+  "tools": [],
+  "request": "The Project tab shows the scale as 'harmonicMinor' and the Knead editor's Scale menu shows 'harmonic Minor'. Make them show proper names. Diff.",
+  "key": {
+   "correct": "Reuse getScaleLabel from src/utils/Music/MusicalScale.ts (the labels the piano-roll toolbar already shows) in src/modules/ContentBrowser/presentations/views/Sidebar/ProjectTab.tsx and for the option text in src/modules/TimelineEditor/presentations/views/ClipView/KneadEditor.tsx; drop the camelCase split and the CSS `capitalize`; option values stay the stored identifiers, so stored data is unchanged. Not AiGeneration's SCALE_LABELS, which is a different ScaleType set. Good extra: getScaleLabel reads a plain object, so stored names like 'constructor' hit Object.prototype; the later fix moved it to a Map.",
+   "flaws": "A new label map or a capitalise/split helper; making option values the labels (writes labels into the project); importing AiGeneration's SCALE_LABELS.",
+   "evidence": "Fix commit 6efe779ad3 (#6188) diff; parent: PianoRollToolbar.tsx:194 uses getScaleLabel, MusicalScale.ts:21-39, AiGeneration/models/MidiPatternType.ts:48 separate SCALE_LABELS; follow-up b6b74aec2f Map lookup."
+  },
+  "source": "Real fix 6efe779ad3, time-travelled to its parent."
+ },
+ {
+  "id": "drill-13",
+  "repo": "sd",
+  "at": "ccb8d0f0c48ded1aa5ba78c67136cf9fd3068402",
+  "paths": [
+   "src",
+   "docs",
+   "scripts",
+   ".agents",
+   "AGENTS.md",
+   "package.json",
+   "eslint.config.mjs",
+   "vite.config.ts"
+  ],
+  "tools": [],
+  "request": "Cut Clip from the command palette leaves nothing in undo history, and on a comped clip the takes are gone for good. Cmd+X is fine. Fix the palette entry. Diff.",
+  "key": {
+   "correct": "The palette entry in src/modules/CommandInterface/useCases/commands/EditCommands.ts calls Arrangement's cutSelectedClip() directly. Dispatch the registered cutClip AppAction instead, `void executeUserAppAction({ type: 'cutClip' })`, the same route as the Cmd+X shortcut (shortcutStore editing.cutClip) and the clip context menu, so handleCutClip's capture and undo entry apply and undo restores clip and takes. Update the EditCommands spec.",
+   "flaws": "Wrapping cutSelectedClip in pushUndoEntry or snapshotting takes by hand; changing cutSelectedClip itself; adding a new action.",
+   "evidence": "Fix commit 29d6ffc43e (#4758) diff; at parent handlerContract.ts:1911 `cutClip`, shortcutStore.ts:164-168 and ClipContextMenu.tsx:433 dispatch it."
+  },
+  "source": "Real fix 29d6ffc43e (lower difficulty control)."
+ },
+ {
+  "id": "drill-14",
+  "repo": "sd",
+  "at": null,
+  "paths": null,
+  "tools": [],
+  "request": "I want a way to flush the Dutch Oven's reverb tail from the worklet without losing its settings, for a clear-tail on stop. Add it end to end: Rust, wasm, worklet message. Files, commands to run, and the diff.",
+  "key": {
+   "correct": "Add a #[wasm_bindgen] method on ProofChamberInstance inside the exported impl block of crates/proof-chamber/src/lib.rs (the block at ~405, not the Rust-only impl at ~612) that clears the active engine's state and output buffers but keeps the parameter cache and re-applies it: reset_active_engine() + replay_cached_parameters() + zero out_left/out_right. Do not reuse the existing reset(), which also replaces the ParameterCache. It runs from the worklet's port.onmessage on the audio thread, so it must not allocate (crate AGENTS invariants; extend the allocation test). Regenerate, never hand-edit: `pnpm guard --profile broad -- pnpm wasm:proof-chamber` (rewrites public/wasm/proof-chamber/* and, via scripts/gen-proof-chamber-worklet.ts, src/modules/AudioEngine/wasm/proof_chamber.js and .d.ts stamped with the crate-source hash), then `pnpm wasm:manifest`, `pnpm wasm:verify`, `pnpm release:restamp:wasm`. Worklet: a new message type handled in src/modules/AudioEngine/worklets/proofChamberProcessor.ts onmessage, guarded like 'param' (_instance non-null, not _faulted), posted from ProofChamberNode.ts.",
+   "flaws": "Calling reset() (drops parameters); hand-editing proof_chamber.d.ts/js or the public/wasm artifacts; putting the method in the Rust-only impl (not exported); allocating on the message path; skipping manifest/verify/restamp.",
+   "evidence": "crates/proof-chamber/src/lib.rs:405-407 (#[wasm_bindgen] impl), :612-614 Rust-only impl, :659 reset_active_engine, :701/:724 replay_cached_parameters, :733 pub fn reset clears params; src/modules/AudioEngine/wasm/proof_chamber.d.ts line 1 crate-source hash; scripts/gen-proof-chamber-worklet.ts header; package.json:104 wasm:proof-chamber; AGENTS.md checks table lines 284-287; crates/proof-chamber/AGENTS.md; proofChamberProcessor.ts:76-95."
+  },
+  "source": "HEAD state."
+ },
+ {
+  "id": "drill-15",
+  "repo": "sd",
+  "at": "26a16201e54ee34078a52f8cca223b3ea0a07a9e",
+  "paths": [
+   "src",
+   "docs",
+   "scripts",
+   ".agents",
+   "AGENTS.md",
+   "package.json",
+   "eslint.config.mjs",
+   "vite.config.ts"
+  ],
+  "tools": [],
+  "request": "Collab case: I rename a track, then change a clip's fade. A peer changes that same fade. I press Cmd+Z: undo stops dead instead of skipping the conflicted fade step and undoing my rename. Other edits step over fine. Fix it. Diff.",
+  "key": {
+   "correct": "Undo step-over only moves onto entries whose undo declares it can refuse safely. handleRenameTrack (src/modules/Arrangement/handlers/track/renameTrack.ts) already refuses when expectedName no longer matches the live track but never declared it. Add `canReportConflict: true` to its createHandler options (as handleSetClipFade/handleSetClipColor do) and cover renameTrack in the registry honesty spec src/modules/Command/useCases/__tests__/canReportConflictRegistry.spec.ts, plus an undo replay case. No change to the undo walker.",
+   "flaws": "Changing the undo/step-over logic in Command; letting undo skip any entry; declaring the flag on handlers that cannot refuse; adding a new conflict check to rename.",
+   "evidence": "Fix commit 2b34220f50 (#6183): renameTrack.ts +canReportConflict, canReportConflictRegistry.spec.ts, undoRedoReplayConflicts.spec.ts; precedent at parent handleSetClipFade.ts:10-11, handleSetClipColor.ts:9-11."
+  },
+  "source": "Real fix 2b34220f50, time-travelled to its parent."
+ },
+ {
+  "id": "drill-16",
+  "repo": "sd",
+  "at": null,
+  "paths": null,
+  "tools": [],
+  "request": "I want a tiny horizontal output level bar in each track header. Simplest is probably giving DawMeterBar a trackId prop and letting it subscribe itself. Files and diff.",
+  "key": {
+   "correct": "Do not make DawMeterBar subscribe: src/components may not import stores or use cases (src/components/AGENTS.md hard rule, enforced by the deps check). Keep it presentational and drive its existing fillRef. Add a hook in Arrangement presentations (TrackHeader's module) that registers a tick on the shared animationScheduler (src/utils/DOM/AnimationScheduler) reading getTrackPeakLevel(trackId) from AudioEngine's useCases barrel and writes fillRef.current.style.width, unregistering on unmount: the pattern useStatusBarMetrics uses for the master bar, with no React state per frame. Reusing Metering's LevelMeter (trackId prop, presentations/views barrel, as MixerLevelReadout does) is acceptable if a vertical canvas meter is fine. No useMemo/useCallback/React.memo.",
+   "flaws": "Store or AudioEngine imports inside DawMeterBar / src/components; setState on every animation frame; reading the audioEngine repository directly; a private requestAnimationFrame loop per track instead of the scheduler (minor).",
+   "evidence": "src/components/AGENTS.md 'No direct business-store or use-case import'; DawMeterBar.tsx props (fillRef, value); StatusBar.tsx:73-94 + useStatusBarMetrics.ts:302,535-541 (refs + animationScheduler.register); AudioEngine/useCases/index.ts:221 getTrackPeakLevel; Metering/presentations/views/LevelMeter.tsx and MixerLevelReadout.tsx:6,55."
+  },
+  "source": "HEAD state."
+ },
+ {
+  "id": "drill-17",
+  "repo": "sd",
+  "at": null,
+  "paths": null,
+  "tools": [],
+  "request": "Preferences > General > Metronome: Enabled and Volume don't do anything. Make them apply to new projects, like the count-in preference does. Diff.",
+  "key": {
+   "correct": "Seed them in src/modules/Transport/useCases/preferencesSeededTransportState.ts (metronomeEnabled: prefs.metronomeEnabled, metronomeVolume: prefs.metronomeVolume beside countIn/preRoll). That function is the one seam seedTransportForNewProject uses through the Transport participant in src/app/registerProjectLifecycle.ts; loaded projects keep their saved transport because the hydrate path (restoreTransportSnapshot) does not go through it. Do not flip the open project's transport when the preference changes and do not write the preference into the project or through an AppAction (preferences are client-local). No schema bump or migration is needed: the stored default false equals the new default, so unlike recordCountIn's schema-3 migration a stored true is the user's choice. Extend the preferencesSeededTransportState spec.",
+   "flaws": "Subscribing to preferencesStore and calling setMetronomeEnabled on change; reading the preference in scheduleMetronome at play time (overrides the project's saved metronome); copying the recordCountIn migration to rewrite stored values; storing the preference in the project.",
+   "evidence": "metronomeEnabled/metronomeVolume preference read only by Preferences GeneralSection.tsx:103-125 (no consumer elsewhere); TransportState.ts:8-9,32-33; preferencesSeededTransportState.ts:5-27 doc; registerProjectLifecycle.ts Transport participant (seedTransportForNewProject / restoreTransportSnapshot); Preferences AGENTS.md invariant 'client-local'; Preferences.ts:68-72 schema 3 note."
+  },
+  "source": "HEAD state: inert preference."
+ },
+ {
+  "id": "drill-18",
+  "repo": "sd",
+  "at": null,
+  "paths": null,
+  "tools": [],
+  "request": "Add 'Select All Clips on Track' to the track header right-click menu. Diff.",
+  "key": {
+   "correct": "In src/modules/Arrangement/presentations/views/TrackContextMenu.tsx add an item calling Arrangement's existing selectAllClips (useCases/clipSelection/selectAllClips.ts, relative import inside the module) with a getter returning this track's clip ids, then close(). Clip selection is local UI state (clipSelectionStore, not a project document slot), so no AppAction, no executeUserAppAction, no undo entry. selectAllClips resolves the primary through resolvePrimaryClip, so a several-clip selection keeps no primary (single-clip commands act on the primary); setClipSelection would make the first clip primary.",
+   "flaws": "Creating an AppAction or dispatching through executeUserAppAction for selection; setClipSelection(ids) (sets a primary); writing clipSelectionStore from the view; the global selectAllClips callback over every track.",
+   "evidence": "selectAllClips.ts and resolvePrimaryClip.ts ('Several commands act on the primary alone, so a many-clip Select All keeps none'); setClipSelection.ts sets selectedClipId = clipIds[0]; clipSelectionStore absent from registerProjectSlotProjections.ts; TrackContextMenu.tsx:178-320 menu items."
+  },
+  "source": "HEAD state."
+ },
+ {
+  "id": "drill-19",
+  "repo": "sd",
+  "at": "420d0eaa09ea0594cbce915dd5eeb760ae5137fd",
+  "paths": [
+   "src",
+   "docs",
+   "scripts",
+   ".agents",
+   "AGENTS.md",
+   "package.json",
+   "eslint.config.mjs",
+   "vite.config.ts"
+  ],
+  "tools": [],
+  "request": "Piano roll with several clips open: the 'focused clip for note input' selector only works for the pencil draw. Step input, chord stamp, paint and click-to-stamp still write into the primary clip. Make every note-creation gesture use the focused clip. Diff.",
+  "key": {
+   "correct": "In src/modules/TimelineEditor/presentations/hooks/usePianoRollInteractions.ts compute one targetClipId per render: focusedClipId when it is the primary or still present in openedClipNotes, otherwise the primary (a stale focus after the clip is deselected/deleted must not route notes into a clip the roll no longer renders). Use it in every creation path (step input, chord stamp, paint, click-stamp, draw) AND in every undo/redo closure; read the target clip's own notes (openedClipNotes[target], not the primary's `notes`) for paint dedupe and the paint undo snapshot; audition the click-stamp through the target clip's track (resolveTrackIdForClip). PianoRoll.tsx snaps a stale focusedClipId back to the primary.",
+   "flaws": "Swapping only the add calls while undo/redo closures still use clipId; deduping paint against the primary's notes; no stale-focus fallback; auditioning through the primary's track.",
+   "evidence": "Fix commit ac13b83272 (#2853) diff of usePianoRollInteractions.ts and PianoRoll.tsx; parent has openedClipNotes, resolveTrackIdForClip (line 83) and `focusedClipId ?? clipId` only in the draw path (line ~788)."
+  },
+  "source": "Real fix ac13b83272, time-travelled to its parent."
+ },
+ {
+  "id": "drill-20",
+  "repo": "sd",
+  "at": "5d96448a7a7b5cf783b7d51169303893da767162",
+  "paths": [
+   "src",
+   "docs",
+   "scripts",
+   ".agents",
+   "AGENTS.md",
+   "package.json",
+   "eslint.config.mjs",
+   "vite.config.ts"
+  ],
+  "tools": [],
+  "request": "getPlannedTrackState builds a Track literal by hand for batch preflight, and someone has to update it every time Track grows a field. Make it stop drifting. Diff.",
+  "key": {
+   "correct": "Reuse createTrack from src/modules/Arrangement/models/Track.ts in src/modules/Arrangement/handlers/getPlannedTrackState.ts: createTrack({ id, name, kind, gain, color: '#000000', initialAlternativeId: `planned-alternative-${id}` }). Pass the colour explicitly: without it createTrack calls reserveNextTrackColor(), which advances the module-level trackColorCounter, so a validation-only preflight would consume a palette slot and shift the colour the real addTrack gets. Keep the deterministic alternative id. kind is audio/bus/folder here, so createTrack's default MIDI synth device does not apply.",
+   "flaws": "A new factory or defaults object beside createTrack; calling createTrack without color (side effect in preflight); a random alternative id; a type-only guard that still keeps the literal.",
+   "evidence": "Fix commit 9da9f5d07a diff; parent Track.ts:220-286 (reserveNextTrackColor increments trackColorCounter; createTrack uses it when color is absent; initialAlternativeId option)."
+  },
+  "source": "Real fix 9da9f5d07a, time-travelled to its parent."
+ },
+ {
+  "id": "drill-21",
+  "repo": "sd",
+  "at": null,
+  "paths": null,
+  "tools": [],
+  "request": "Cmd+D and Option+D now leave the copy selected. Duplicate and Duplicate to Next Bar from the clip right-click menu still leave the original selected. Make the menu match. Diff.",
+  "key": {
+   "correct": "In src/modules/Arrangement/presentations/views/ClipContextMenu.tsx mint each copy's id up front with Arrangement's prepareDuplicateClipTargetId (relative import of useCases/clip/prepareDuplicateClipTargetId), pass it as targetClipId in the duplicateClip / duplicateClipToNextBar payloads (keep the menu's groupId/groupLabel so a multi-clip duplicate stays one undo step), await the dispatches, then select only copies that exist in trackStore afterwards: one -> selectClipWithFocus, several -> setClipSelection; a refused/conflicted copy does not move the selection. This mirrors CommandInterface's duplicateClipSelectingCopy / duplicateSelectedClipsForward; reusing duplicateClipSelectingCopy needs it exported from CommandInterface's useCases barrel (presentation code may import that barrel, as TrackListView does).",
+   "flaws": "Diffing the store or guessing the clip after the source; selecting before the dispatch resolves; selecting refused copies; dropping the shared groupId; deep-importing CommandInterface internals.",
+   "evidence": "ClipContextMenu.tsx:70-77 duplicateSelected and :402-411 Duplicate to Next Bar (no targetClipId, no selection); CommandInterface clipShortcuts/duplicateClipSelectingCopy.ts (not in barrel); Arrangement useCases/index.ts exports prepareDuplicateClipTargetId, selectClipWithFocus, setClipSelection; 6af2b58df8."
+  },
+  "source": "HEAD state; keyboard paths fixed in 6af2b58df8, menu not."
+ },
+ {
+  "id": "drill-22",
+  "repo": "sd",
+  "at": null,
+  "paths": null,
+  "tools": [],
+  "request": "Status bar: add a small badge with the native engine's xrun count and the last output stream error. Desktop only. Just call the engine diagnostics command from the status bar on a timer. Files and diff.",
+  "key": {
+   "correct": "Do not call the bridge or add a poll: presentation code may not call desktopInvoke (only repository roots and src/utils/desktopBridge.ts), and the diagnostics command drains the engine's event ring (each event handed out once). AudioEngine already polls it once a second through refreshEngineRtDiagnostics (watchNativeEngineLiveness reuses it for exactly this reason) and appends drained events into engineRtDiagnosticsStore. There is no xrun counter field: xruns are streamError events with kind 'xrun' kept (capped at ENGINE_EVENT_HISTORY_LIMIT) in the store's events, and latest.outputStreamFault is the last non-xrun output error. The store is not exported and readNativeEngineStatus returns only latest, so add an AudioEngine read use case (or extend readNativeEngineStatus) that counts stored xrun events, export it from the useCases barrel, and show it in WorkspaceShell's StatusBar through the useStatusBarMetrics ref pattern; hide it unless isExistingEngineReading(latest).",
+   "flaws": "desktopInvoke or the getEngineRtDiagnostics repository from WorkspaceShell; a second timer calling the drain (or refreshEngineRtDiagnostics) beside the existing poll; counting only latest.events (one drain); inventing an xrun counter field; deep-importing the store.",
+   "evidence": "AudioEngine repositories/engineDiagnostics/getEngineRtDiagnostics.ts (desktopInvoke); useCases/engineAccess/refreshEngineRtDiagnostics.ts doc ('The command drains the engine's event ring'); livePlayback/watchNativeEngineLiveness.ts:6-12; models/EngineRtDiagnostics.ts (fields, outputStreamFault, events, isExistingEngineReading); engineAccess/readNativeEngineStatus.ts; AGENTS.md Architecture 'Only repository roots and src/utils/desktopBridge.ts may call the desktop bridge'."
+  },
+  "source": "HEAD state; request carries the wrong approach."
+ },
+ {
+  "id": "drill-23",
+  "repo": "sd",
+  "at": null,
+  "paths": null,
+  "tools": [],
+  "request": "MasterChannelStrip re-renders on every transport change because it pulls the whole transportStore just for masterGain. Wrap it in React.memo and memoize its handlers. Diff.",
+  "key": {
+   "correct": "Not React.memo/useMemo/useCallback: AGENTS.md says React Compiler owns memoization (vite.config.ts:163 reactCompilerPreset) and eslint bans useMemo/useCallback/React.memo in app code. Fix the subscription instead: replace `useStore(transportStore, defaultTransportState).masterGain` (MasterChannelStrip.tsx:476) with useStoreSelector(transportStore, (state) => state?.masterGain ?? defaultTransportState.masterGain) from src/infra/store/useStoreSelector, so only masterGain changes re-render the strip.",
+   "flaws": "Adding React.memo/useMemo/useCallback or eslint-disable comments; moving masterGain into a new store; memoizing child components.",
+   "evidence": "MasterChannelStrip.tsx:476; src/infra/store/useStoreSelector.ts; vite.config.ts:10,163; eslint.config.mjs:1379,1414; AGENTS.md Architecture 'React Compiler owns memoization. Do not add useMemo, useCallback, React.memo, or forwardRef.'"
+  },
+  "source": "HEAD state; request carries the forbidden approach."
+ },
+ {
+  "id": "drill-24",
+  "repo": "sd",
+  "at": "58e1b329d316ce5881ac6915d2708f26d3ae8a87",
+  "paths": [
+   "src",
+   "docs",
+   "scripts",
+   ".agents",
+   "AGENTS.md",
+   "package.json",
+   "eslint.config.mjs",
+   "vite.config.ts"
+  ],
+  "tools": [],
+  "request": "Undo of a track delete: if a take lane for that track id was placed while the track was gone (a projection write), the track ends up with two lanes and the restored takes are dead. Fix the restore. Diff.",
+  "key": {
+   "correct": "src/modules/Arrangement/handlers/restore/handleRestoreTrack.ts appends captured lanes straight to takeLaneStore. Put each captured lane back through the shared insertTakeLane (useCases/comping/insertTakeLane.ts), the insert every lane-creating route uses, which merges into an existing lane for the track via reconcileLane (the same reconcile restoreTakesForClip uses). Update the comments in insertTakeLane.ts and restoreTakesForClip.ts that name handleRestoreTrack as the remaining exception (#4527). Spec: projected lane + restored lane end as one lane holding both.",
+   "flaws": "Custom merge logic in the handler; replacing or dropping either lane; de-duplicating by track id and losing takes.",
+   "evidence": "Fix commit 2c05fed985 (#4766) diff; parent insertTakeLane.ts doc names handleRestoreTrack as the exception."
+  },
+  "source": "Real fix 2c05fed985 (lower difficulty control)."
+ },
+ {
+  "id": "drill-25",
+  "repo": "sk",
+  "at": null,
+  "paths": null,
+  "tools": [],
+  "request": "Add a micro skill called recap: at the end of a session it writes what changed, what's verified and what's left to SESSION.md at the repo root, so the next agent can pick up. Give me the files and their contents.",
+  "key": {
+   "correct": "Push back on the shape first: skills write no document of their own (AGENTS.md edit contract; README: 'None of these writes a document of its own; each answers in chat or edits its target'), so no SESSION.md, answer in chat; and the existing `handoff` micro skill already is the paste-ready brief for a fresh agent in chat, so this overlaps it. If a skill still ships: skills/recap/SKILL.md with frontmatter `name: recap`, a one-line description that does not contain the word 'recap' (lint self-name check) or any sibling name, with no ': ', ' #' or <>, saying 'Use only when the user asks', plus `disable-model-invocation: true`; skills/recap/agents/openai.yaml exactly `policy:` / `  allow_implicit_invocation: false`; a README Micro table row `| [`recap`](./skills/recap/SKILL.md) | ... |`; body of at most 10 'If C, do X' rules with no modal verbs, ending with Done when; no sibling skill names anywhere in the body (lint rejects words like proper, handoff, settle, panel, drill); then sh scripts/lint.sh and sh scripts/test-lint.sh.",
+   "flaws": "Writing SESSION.md; a description starting 'Recap ...' (self-name lint failure); missing agents/openai.yaml or wrong content; no README row; naming handoff or another sibling in the body; extra files.",
+   "evidence": "AGENTS.md edit contract and authoring rules; README.md catalog + Micro section; scripts/lint.sh (self-name, sibling-name, openai.yaml, catalog checks); README handoff row."
+  },
+  "source": "Skills repo contract."
+ },
+ {
+  "id": "drill-26",
+  "repo": "sk",
+  "at": null,
+  "paths": null,
+  "tools": [],
+  "request": "AGENTS says no hedges or modal verbs in skills, but nothing enforces it. Add a lint check that rejects should, could, might, may, probably, perhaps. Diff.",
+  "key": {
+   "correct": "scripts/lint.sh: inside the per-skill loop next to the thinker/method check, a case-insensitive word-bounded grep in the same style `(^|[^[:alnum:]])(should|could|might|may|probably|perhaps)([^[:alnum:]]|$)` with its own fail message. scripts/test-lint.sh: a new mutation case ('modal-verb:<message>') that appends a modal sentence to the first skill, and the final 'test-lint: OK (17 mutations killed)' bumped to 18. AGENTS.md authoring rule says lint rejects them (precedent 08dda7f). Before landing, run lint on the current catalog and resolve every hit: decide the scope (body vs the description, which is written in the user's own words and is gated by the trigger eval) rather than silently rewriting descriptions. Probe false positives (e.g. 'mayor'). Deterministic rule only.",
+   "flaws": "No mutation case, or the count not bumped (test-lint output then lies); substring matching that hits 'mayor'/'maybe'; rewriting descriptions without the trigger eval; an LLM-based check; not running lint on the current skills.",
+   "evidence": "scripts/lint.sh thinker/method block; scripts/test-lint.sh case list and last line 'test-lint: OK (17 mutations killed)'; commit 08dda7f added a lint rule + mutation + AGENTS line and swept skills; AGENTS.md 'Lint with deterministic rules only', trigger eval section."
+  },
+  "source": "Skills repo lint conventions."
+ },
+ {
+  "id": "drill-27",
+  "repo": "sk",
+  "at": null,
+  "paths": null,
+  "tools": [],
+  "request": "debloat doesn't fire when I say 'make this shorter' or 'trim this'. Add those to its description. Diff.",
+  "key": {
+   "correct": "A description change is gated by the trigger eval in AGENTS.md: about 20 queries in the user's words, half should-trigger and half near misses sharing keywords (e.g. shortening code or a commit message), each run 3 times through `claude -p` with the model pinned, old and new description on the same set; keep the new one only if it passes more queries and adds no false trigger; commit the query set and per-query rates under evals/; the commit message records the witnessed failure and the with/without result (edit contract). The new line stays one line under 1024 chars, starts with a letter, has no ': ', ' #' or <>, never contains the word 'debloat' or a sibling name, and keeps the nearest exclusion. Only the frontmatter line of skills/debloat/SKILL.md changes; README row only if the use changes.",
+   "flaws": "Editing the line without the eval and evals/ artifacts; a 'Triggers: ...' style list (colon-space fails lint); naming the skill in its description; dropping the exclusion.",
+   "evidence": "AGENTS.md 'Trigger eval' section and edit contract ('Change a skill only for a witnessed failure. Record the failure and the with/without result in the commit message.'); scripts/lint.sh description checks (length, colon-space, #, <>, self-name)."
+  },
+  "source": "Skills repo contract."
+ },
+ {
+  "id": "drill-28",
+  "repo": "sk",
+  "at": null,
+  "paths": null,
+  "tools": [],
+  "request": "In drill, add a short Related section at the end pointing to settle and dissect with links, so people find them. Diff.",
+  "key": {
+   "correct": "Decline the edit as asked: every skill must work installed alone, AGENTS.md says never name the skill itself or a sibling, and scripts/lint.sh fails any SKILL.md that names a sibling skill anywhere ('names sibling skill') or has a relative link ('has a relative link'); skills also end with Done when or the exact output. Cross-references already live in the README catalog, which lists drill, settle and dissect; improve discovery there if needed.",
+   "flaws": "Adding the section (lint fails); swapping to absolute GitHub URLs (still names siblings); paraphrasing around the names while keeping the dependency; editing the skill without a witnessed failure.",
+   "evidence": "AGENTS.md first paragraph and 'Never name the skill itself or a sibling'; scripts/lint.sh sibling loop and relative-link check; README catalog rows."
+  },
+  "source": "Skills repo contract."
+ },
+ {
+  "id": "drill-29",
+  "repo": "sk",
+  "at": null,
+  "paths": null,
+  "tools": [],
+  "request": "revolver's SKILL.md is long. Move the stance list into skills/revolver/references/stances.md and link it from SKILL.md. Diff.",
+  "key": {
+   "correct": "Not allowed: one SKILL.md per skill and the only other permitted file is agents/openai.yaml in a disable-model-invocation skill (AGENTS.md edit contract); scripts/lint.sh fails 'nested payload under skills/' for references/stances.md and rejects relative links in a SKILL.md; README promises each folder is one SKILL.md with no hidden dependencies. Shorten in place instead, and a content change needs a witnessed failure with the with/without result in the commit message, and a rewrite ships only if it beats meaning-preserving paraphrases.",
+   "flaws": "Creating references/ or any second file; linking out of SKILL.md; moving content into README.",
+   "evidence": "AGENTS.md edit contract; scripts/lint.sh payload checks (find -mindepth 3/4) and relative-link check; README intro."
+  },
+  "source": "Skills repo contract."
+ },
+ {
+  "id": "drill-30",
+  "repo": "sk",
+  "at": null,
+  "paths": null,
+  "tools": [],
+  "request": "Make tldr fire on its own when I say 'too long' or 'give me the short version', not only on /tldr. Diff.",
+  "key": {
+   "correct": "Turning a micro skill model-invoked touches several places: remove `disable-model-invocation: true` from skills/tldr/SKILL.md; delete skills/tldr/agents/openai.yaml (lint fails 'agents/ without disable-model-invocation: true'); move its README row from the Micro table (whose text says each runs only when called by name) into the main Catalog table; rewrite the description to drop 'Use only when the user asks', state the real trigger in the user's words and the nearest exclusion, never containing 'tldr' or a sibling name and no ': '. Gate the description change with the trigger eval (about 20 queries, half near misses such as 'tighten this doc', 3 runs each, pinned model, old vs new, queries and rates committed under evals/) and record the witnessed failure and with/without result in the commit message.",
+   "flaws": "Only deleting the frontmatter key (lint fails on the leftover agents/ folder); leaving the README row under Micro; skipping the eval; description naming tldr.",
+   "evidence": "scripts/lint.sh openai.yaml / agents block; README Micro paragraph; AGENTS.md trigger eval and edit contract."
+  },
+  "source": "Skills repo contract."
+ }
+]
