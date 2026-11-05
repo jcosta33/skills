@@ -1,0 +1,82 @@
+[
+ {
+  "query": "add a retry limit to the webhook sender, right now it retries forever",
+  "should_trigger": true
+ },
+ {
+  "query": "we need a way to mute notifications per project. implement it",
+  "should_trigger": true
+ },
+ {
+  "query": "build a csv export button for the reports page",
+  "should_trigger": true
+ },
+ {
+  "query": "wire the new pricing tier into the billing module",
+  "should_trigger": true
+ },
+ {
+  "query": "where should the rate limiter live? I want to add one for the public api",
+  "should_trigger": true
+ },
+ {
+  "query": "implement soft delete for comments",
+  "should_trigger": true
+ },
+ {
+  "query": "add a --dry-run flag to scripts/lint.sh",
+  "should_trigger": true
+ },
+ {
+  "query": "I want users to be able to pin skills. start building it",
+  "should_trigger": true
+ },
+ {
+  "query": "what should we call the thing that merges two catalogs? then build it",
+  "should_trigger": true
+ },
+ {
+  "query": "start implementing offline mode for the editor",
+  "should_trigger": true
+ },
+ {
+  "query": "fix the typo on line 12 of README.md",
+  "should_trigger": false
+ },
+ {
+  "query": "who calls fail() in scripts/lint.sh?",
+  "should_trigger": false
+ },
+ {
+  "query": "migrate the users table from mysql to postgres with zero downtime, staged, with a rollback plan",
+  "should_trigger": false
+ },
+ {
+  "query": "review this diff top to bottom",
+  "should_trigger": false
+ },
+ {
+  "query": "are you sure the lint rejects angle brackets in descriptions? check",
+  "should_trigger": false
+ },
+ {
+  "query": "sqlite or postgres for the cache? give me a recommendation",
+  "should_trigger": false
+ },
+ {
+  "query": "rename the variable tmp to fixture in scripts/test-lint.sh",
+  "should_trigger": false
+ },
+ {
+  "query": "write a commit message for the staged changes",
+  "should_trigger": false
+ },
+ {
+  "query": "explain what the regex ^[[:alpha:]] in lint.sh matches",
+  "should_trigger": false
+ },
+ {
+  "query": "run the tests and tell me whether they pass",
+  "should_trigger": false
+ }
+]

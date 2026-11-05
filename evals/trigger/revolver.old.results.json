@@ -1,0 +1,267 @@
+{
+ "skill": "revolver",
+ "results": [
+  {
+   "query": "review this top to bottom",
+   "should_trigger": true,
+   "triggers": 2,
+   "runs": 3,
+   "rate": 0.6666666666666666,
+   "pass": true,
+   "first_calls": [
+    "Skill:revolver",
+    "Skill:revolver",
+    "tool:Bash"
+   ]
+  },
+  {
+   "query": "do an adversarial review of my branch before I merge",
+   "should_trigger": true,
+   "triggers": 0,
+   "runs": 3,
+   "rate": 0.0,
+   "pass": false,
+   "first_calls": [
+    "tool:Bash",
+    "tool:Bash",
+    "tool:Bash"
+   ]
+  },
+  {
+   "query": "tear this plan apart, every risk you can find",
+   "should_trigger": true,
+   "triggers": 0,
+   "runs": 3,
+   "rate": 0.0,
+   "pass": false,
+   "first_calls": [
+    "tool:Bash",
+    "tool:Bash",
+    "tool:Bash"
+   ]
+  },
+  {
+   "query": "skeptic review of scripts/lint.sh please",
+   "should_trigger": true,
+   "triggers": 1,
+   "runs": 3,
+   "rate": 0.3333333333333333,
+   "pass": false,
+   "first_calls": [
+    "tool:Bash",
+    "Skill:revolver",
+    "tool:Bash"
+   ]
+  },
+  {
+   "query": "I want an exhaustive review of the auth changes: security, data loss, concurrency, all of it",
+   "should_trigger": true,
+   "triggers": 2,
+   "runs": 3,
+   "rate": 0.6666666666666666,
+   "pass": true,
+   "first_calls": [
+    "tool:Bash",
+    "Skill:revolver",
+    "Skill:revolver"
+   ]
+  },
+  {
+   "query": "review this thoroughly:\n- if (n > 10) retry()\n+ if (n >= 10) retry()",
+   "should_trigger": true,
+   "triggers": 1,
+   "runs": 3,
+   "rate": 0.3333333333333333,
+   "pass": false,
+   "first_calls": [
+    "tool:Bash",
+    "Skill:revolver",
+    "none"
+   ]
+  },
+  {
+   "query": "multi-angle review of the migration spec, and fix whatever you find",
+   "should_trigger": true,
+   "triggers": 3,
+   "runs": 3,
+   "rate": 1.0,
+   "pass": true,
+   "first_calls": [
+    "Skill:revolver",
+    "Skill:revolver",
+    "Skill:revolver"
+   ]
+  },
+  {
+   "query": "go over this PR with fresh eyes, as many reviewers as it needs",
+   "should_trigger": true,
+   "triggers": 3,
+   "runs": 3,
+   "rate": 1.0,
+   "pass": true,
+   "first_calls": [
+    "Skill:revolver",
+    "Skill:revolver",
+    "Skill:revolver"
+   ]
+  },
+  {
+   "query": "is this design doc ready? review it hard before we commit to it",
+   "should_trigger": true,
+   "triggers": 0,
+   "runs": 3,
+   "rate": 0.0,
+   "pass": false,
+   "first_calls": [
+    "tool:Bash",
+    "tool:Bash",
+    "tool:Bash"
+   ]
+  },
+  {
+   "query": "review my last 3 commits rigorously and fix what you find",
+   "should_trigger": true,
+   "triggers": 1,
+   "runs": 3,
+   "rate": 0.3333333333333333,
+   "pass": false,
+   "first_calls": [
+    "tool:Bash",
+    "tool:Bash",
+    "Skill:revolver"
+   ]
+  },
+  {
+   "query": "is the README claim that lint rejects descriptions over 1024 characters true?",
+   "should_trigger": false,
+   "triggers": 0,
+   "runs": 3,
+   "rate": 0.0,
+   "pass": true,
+   "first_calls": [
+    "tool:Bash",
+    "tool:Bash",
+    "tool:Bash"
+   ]
+  },
+  {
+   "query": "what checklist would you normally use for a code review?",
+   "should_trigger": false,
+   "triggers": 0,
+   "runs": 3,
+   "rate": 0.0,
+   "pass": true,
+   "first_calls": [
+    "none",
+    "none",
+    "none"
+   ]
+  },
+  {
+   "query": "who calls fail in scripts/lint.sh?",
+   "should_trigger": false,
+   "triggers": 0,
+   "runs": 3,
+   "rate": 0.0,
+   "pass": true,
+   "first_calls": [
+    "tool:Bash",
+    "tool:Bash",
+    "tool:Bash"
+   ]
+  },
+  {
+   "query": "write a review of the movie Dune",
+   "should_trigger": false,
+   "triggers": 0,
+   "runs": 3,
+   "rate": 0.0,
+   "pass": true,
+   "first_calls": [
+    "none",
+    "none",
+    "none"
+   ]
+  },
+  {
+   "query": "rate my last commit message from 1 to 10",
+   "should_trigger": false,
+   "triggers": 0,
+   "runs": 3,
+   "rate": 0.0,
+   "pass": true,
+   "first_calls": [
+    "tool:Bash",
+    "tool:Bash",
+    "tool:Bash"
+   ]
+  },
+  {
+   "query": "event sourcing or plain crud for the orders service? which should we go with",
+   "should_trigger": false,
+   "triggers": 0,
+   "runs": 3,
+   "rate": 0.0,
+   "pass": true,
+   "first_calls": [
+    "Skill:panel",
+    "Skill:panel",
+    "Skill:panel"
+   ]
+  },
+  {
+   "query": "make this README section tighter",
+   "should_trigger": false,
+   "triggers": 0,
+   "runs": 3,
+   "rate": 0.0,
+   "pass": true,
+   "first_calls": [
+    "tool:Bash",
+    "tool:Bash",
+    "Read:/private/tmp/te/proj-revolver-old/README.md"
+   ]
+  },
+  {
+   "query": "add input validation to the signup form",
+   "should_trigger": false,
+   "triggers": 0,
+   "runs": 3,
+   "rate": 0.0,
+   "pass": true,
+   "first_calls": [
+    "tool:Bash",
+    "tool:Bash",
+    "tool:Bash"
+   ]
+  },
+  {
+   "query": "fix the lint error on line 40",
+   "should_trigger": false,
+   "triggers": 0,
+   "runs": 3,
+   "rate": 0.0,
+   "pass": true,
+   "first_calls": [
+    "tool:Bash",
+    "tool:Bash",
+    "tool:Bash"
+   ]
+  },
+  {
+   "query": "what did the reviewer say on PR 12?",
+   "should_trigger": false,
+   "triggers": 0,
+   "runs": 3,
+   "rate": 0.0,
+   "pass": true,
+   "first_calls": [
+    "tool:Bash",
+    "tool:Bash",
+    "tool:Bash"
+   ]
+  }
+ ],
+ "passed": 14,
+ "total": 20
+}

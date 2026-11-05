@@ -1,0 +1,267 @@
+{
+ "skill": "bulletproof",
+ "results": [
+  {
+   "query": "are you sure that's right? check it",
+   "should_trigger": true,
+   "triggers": 0,
+   "runs": 3,
+   "rate": 0.0,
+   "pass": false,
+   "first_calls": [
+    "tool:Bash",
+    "tool:Bash",
+    "none"
+   ]
+  },
+  {
+   "query": "did you actually verify the migration works or are you guessing?",
+   "should_trigger": true,
+   "triggers": 0,
+   "runs": 3,
+   "rate": 0.0,
+   "pass": false,
+   "first_calls": [
+    "tool:Bash",
+    "tool:Bash",
+    "tool:Bash"
+   ]
+  },
+  {
+   "query": "double check every claim in the README install section before I share it",
+   "should_trigger": true,
+   "triggers": 3,
+   "runs": 3,
+   "rate": 1.0,
+   "pass": true,
+   "first_calls": [
+    "Skill:bulletproof",
+    "Skill:bulletproof",
+    "Skill:bulletproof"
+   ]
+  },
+  {
+   "query": "before I send this to the team, make sure each statement in docs/sources.md is accurate",
+   "should_trigger": true,
+   "triggers": 3,
+   "runs": 3,
+   "rate": 1.0,
+   "pass": true,
+   "first_calls": [
+    "Skill:bulletproof",
+    "Skill:bulletproof",
+    "Skill:bulletproof"
+   ]
+  },
+  {
+   "query": "you said all the tests pass. did you check?",
+   "should_trigger": true,
+   "triggers": 0,
+   "runs": 3,
+   "rate": 0.0,
+   "pass": false,
+   "first_calls": [
+    "tool:Bash",
+    "tool:Bash",
+    "tool:Bash"
+   ]
+  },
+  {
+   "query": "verify this citation is real: Huang et al., ICLR 2024, shows models cannot self-correct reasoning",
+   "should_trigger": true,
+   "triggers": 3,
+   "runs": 3,
+   "rate": 1.0,
+   "pass": true,
+   "first_calls": [
+    "Skill:bulletproof",
+    "Skill:bulletproof",
+    "Skill:bulletproof"
+   ]
+  },
+  {
+   "query": "what assumptions is this plan resting on? the plan is to move CI to macos runners to match our dev machines",
+   "should_trigger": true,
+   "triggers": 3,
+   "runs": 3,
+   "rate": 1.0,
+   "pass": true,
+   "first_calls": [
+    "Skill:bulletproof",
+    "Skill:bulletproof",
+    "Skill:bulletproof"
+   ]
+  },
+  {
+   "query": "is it true that npx skills add removes skills that left the catalog? confirm with evidence",
+   "should_trigger": true,
+   "triggers": 3,
+   "runs": 3,
+   "rate": 1.0,
+   "pass": true,
+   "first_calls": [
+    "Skill:bulletproof",
+    "Skill:bulletproof",
+    "Skill:bulletproof"
+   ]
+  },
+  {
+   "query": "I'm about to rely on your summary of the lint rules. make sure every point holds",
+   "should_trigger": true,
+   "triggers": 1,
+   "runs": 3,
+   "rate": 0.3333333333333333,
+   "pass": false,
+   "first_calls": [
+    "tool:Bash",
+    "Skill:bulletproof",
+    "tool:Bash"
+   ]
+  },
+  {
+   "query": "the agent says the feature is done. is it really done? check",
+   "should_trigger": true,
+   "triggers": 3,
+   "runs": 3,
+   "rate": 1.0,
+   "pass": true,
+   "first_calls": [
+    "Skill:bulletproof",
+    "Skill:bulletproof",
+    "Skill:bulletproof"
+   ]
+  },
+  {
+   "query": "who calls fail in scripts/lint.sh?",
+   "should_trigger": false,
+   "triggers": 0,
+   "runs": 3,
+   "rate": 0.0,
+   "pass": true,
+   "first_calls": [
+    "tool:Bash",
+    "tool:Bash",
+    "tool:Bash"
+   ]
+  },
+  {
+   "query": "review the whole diff for security, performance, and correctness issues, every angle",
+   "should_trigger": false,
+   "triggers": 0,
+   "runs": 3,
+   "rate": 0.0,
+   "pass": true,
+   "first_calls": [
+    "tool:Bash",
+    "tool:Bash",
+    "tool:Bash"
+   ]
+  },
+  {
+   "query": "what does disable-model-invocation do?",
+   "should_trigger": false,
+   "triggers": 0,
+   "runs": 3,
+   "rate": 0.0,
+   "pass": true,
+   "first_calls": [
+    "tool:Bash",
+    "tool:Bash",
+    "tool:Bash"
+   ]
+  },
+  {
+   "query": "bun or node for our scripts? recommend one",
+   "should_trigger": false,
+   "triggers": 0,
+   "runs": 3,
+   "rate": 0.0,
+   "pass": true,
+   "first_calls": [
+    "tool:Bash",
+    "tool:Bash",
+    "tool:Bash"
+   ]
+  },
+  {
+   "query": "implement a --verbose flag for scripts/lint.sh",
+   "should_trigger": false,
+   "triggers": 0,
+   "runs": 3,
+   "rate": 0.0,
+   "pass": true,
+   "first_calls": [
+    "tool:Bash",
+    "tool:Bash",
+    "tool:Bash"
+   ]
+  },
+  {
+   "query": "fix the failing test in scripts/test-lint.sh",
+   "should_trigger": false,
+   "triggers": 0,
+   "runs": 3,
+   "rate": 0.0,
+   "pass": true,
+   "first_calls": [
+    "tool:Bash",
+    "tool:Bash",
+    "tool:Bash"
+   ]
+  },
+  {
+   "query": "make this paragraph shorter without losing any facts",
+   "should_trigger": false,
+   "triggers": 0,
+   "runs": 3,
+   "rate": 0.0,
+   "pass": true,
+   "first_calls": [
+    "none",
+    "none",
+    "none"
+   ]
+  },
+  {
+   "query": "translate the README into Portuguese",
+   "should_trigger": false,
+   "triggers": 0,
+   "runs": 3,
+   "rate": 0.0,
+   "pass": true,
+   "first_calls": [
+    "Read:/private/tmp/te/proj-bulletproof-old/README.md",
+    "tool:Bash",
+    "tool:Bash"
+   ]
+  },
+  {
+   "query": "how many skills are in the catalog?",
+   "should_trigger": false,
+   "triggers": 0,
+   "runs": 3,
+   "rate": 0.0,
+   "pass": true,
+   "first_calls": [
+    "tool:Bash",
+    "tool:Bash",
+    "tool:Bash"
+   ]
+  },
+  {
+   "query": "trace how a description flows through lint.sh from the file to a failure",
+   "should_trigger": false,
+   "triggers": 0,
+   "runs": 3,
+   "rate": 0.0,
+   "pass": true,
+   "first_calls": [
+    "Skill:dissect",
+    "Skill:dissect",
+    "Skill:dissect"
+   ]
+  }
+ ],
+ "passed": 16,
+ "total": 20
+}

@@ -1,0 +1,267 @@
+{
+ "skill": "dissect",
+ "results": [
+  {
+   "query": "who calls the fail function in scripts/lint.sh? I need every path",
+   "should_trigger": true,
+   "triggers": 3,
+   "runs": 3,
+   "rate": 1.0,
+   "pass": true,
+   "first_calls": [
+    "Skill:dissect",
+    "Skill:dissect",
+    "Skill:dissect"
+   ]
+  },
+  {
+   "query": "is parseManifest dead code? nothing seems to import it",
+   "should_trigger": true,
+   "triggers": 3,
+   "runs": 3,
+   "rate": 1.0,
+   "pass": true,
+   "first_calls": [
+    "Skill:dissect",
+    "Skill:dissect",
+    "Skill:dissect"
+   ]
+  },
+  {
+   "query": "figure out what actually happens when a user clicks save, end to end",
+   "should_trigger": true,
+   "triggers": 3,
+   "runs": 3,
+   "rate": 1.0,
+   "pass": true,
+   "first_calls": [
+    "Skill:dissect",
+    "Skill:dissect",
+    "Skill:dissect"
+   ]
+  },
+  {
+   "query": "what touches the session cache? I want to change its format",
+   "should_trigger": true,
+   "triggers": 3,
+   "runs": 3,
+   "rate": 1.0,
+   "pass": true,
+   "first_calls": [
+    "Skill:dissect",
+    "Skill:dissect",
+    "Skill:dissect"
+   ]
+  },
+  {
+   "query": "trace how a webhook request flows from the route down to the database",
+   "should_trigger": true,
+   "triggers": 3,
+   "runs": 3,
+   "rate": 1.0,
+   "pass": true,
+   "first_calls": [
+    "Skill:dissect",
+    "Skill:dissect",
+    "Skill:dissect"
+   ]
+  },
+  {
+   "query": "what reaches deleteAccount? I need to know before I add a check there",
+   "should_trigger": true,
+   "triggers": 3,
+   "runs": 3,
+   "rate": 1.0,
+   "pass": true,
+   "first_calls": [
+    "Skill:dissect",
+    "Skill:dissect",
+    "Skill:dissect"
+   ]
+  },
+  {
+   "query": "why does the export job write twice? figure out what's going on in the code",
+   "should_trigger": true,
+   "triggers": 3,
+   "runs": 3,
+   "rate": 1.0,
+   "pass": true,
+   "first_calls": [
+    "Skill:dissect",
+    "Skill:dissect",
+    "Skill:dissect"
+   ]
+  },
+  {
+   "query": "map every caller of setFeatureFlag, including dynamic ones",
+   "should_trigger": true,
+   "triggers": 3,
+   "runs": 3,
+   "rate": 1.0,
+   "pass": true,
+   "first_calls": [
+    "Skill:dissect",
+    "Skill:dissect",
+    "Skill:dissect"
+   ]
+  },
+  {
+   "query": "before I remove the legacy auth middleware, prove nothing still goes through it",
+   "should_trigger": true,
+   "triggers": 3,
+   "runs": 3,
+   "rate": 1.0,
+   "pass": true,
+   "first_calls": [
+    "Skill:dissect",
+    "Skill:dissect",
+    "Skill:dissect"
+   ]
+  },
+  {
+   "query": "how does a config key end up changing the retry timer? follow it through",
+   "should_trigger": true,
+   "triggers": 3,
+   "runs": 3,
+   "rate": 1.0,
+   "pass": true,
+   "first_calls": [
+    "Skill:dissect",
+    "Skill:dissect",
+    "Skill:dissect"
+   ]
+  },
+  {
+   "query": "are you sure the README claim about 1024 characters is right? verify it",
+   "should_trigger": false,
+   "triggers": 0,
+   "runs": 3,
+   "rate": 0.0,
+   "pass": true,
+   "first_calls": [
+    "Skill:bulletproof",
+    "tool:Bash",
+    "Skill:bulletproof"
+   ]
+  },
+  {
+   "query": "give me an overview of the whole repo structure",
+   "should_trigger": false,
+   "triggers": 0,
+   "runs": 3,
+   "rate": 0.0,
+   "pass": true,
+   "first_calls": [
+    "tool:Bash",
+    "tool:Bash",
+    "tool:Bash"
+   ]
+  },
+  {
+   "query": "review my PR adversarially",
+   "should_trigger": false,
+   "triggers": 0,
+   "runs": 3,
+   "rate": 0.0,
+   "pass": true,
+   "first_calls": [
+    "tool:Bash",
+    "tool:Bash",
+    "tool:Bash"
+   ]
+  },
+  {
+   "query": "add a caching layer to the api",
+   "should_trigger": false,
+   "triggers": 0,
+   "runs": 3,
+   "rate": 0.0,
+   "pass": true,
+   "first_calls": [
+    "tool:Bash",
+    "tool:Bash",
+    "tool:Bash"
+   ]
+  },
+  {
+   "query": "what does idempotent mean?",
+   "should_trigger": false,
+   "triggers": 0,
+   "runs": 3,
+   "rate": 0.0,
+   "pass": true,
+   "first_calls": [
+    "none",
+    "none",
+    "none"
+   ]
+  },
+  {
+   "query": "rest or graphql for us? recommend one",
+   "should_trigger": false,
+   "triggers": 0,
+   "runs": 3,
+   "rate": 0.0,
+   "pass": true,
+   "first_calls": [
+    "tool:Bash",
+    "tool:Bash",
+    "tool:Bash"
+   ]
+  },
+  {
+   "query": "double check the numbers in the release notes",
+   "should_trigger": false,
+   "triggers": 0,
+   "runs": 3,
+   "rate": 0.0,
+   "pass": true,
+   "first_calls": [
+    "tool:Bash",
+    "Skill:bulletproof",
+    "Skill:bulletproof"
+   ]
+  },
+  {
+   "query": "list the files in scripts/",
+   "should_trigger": false,
+   "triggers": 0,
+   "runs": 3,
+   "rate": 0.0,
+   "pass": true,
+   "first_calls": [
+    "tool:Bash",
+    "tool:Bash",
+    "tool:Bash"
+   ]
+  },
+  {
+   "query": "rename parseManifest to readManifest everywhere",
+   "should_trigger": false,
+   "triggers": 0,
+   "runs": 3,
+   "rate": 0.0,
+   "pass": true,
+   "first_calls": [
+    "tool:Bash",
+    "tool:Bash",
+    "tool:Bash"
+   ]
+  },
+  {
+   "query": "summarize what changed in the last 5 commits",
+   "should_trigger": false,
+   "triggers": 0,
+   "runs": 3,
+   "rate": 0.0,
+   "pass": true,
+   "first_calls": [
+    "tool:Bash",
+    "tool:Bash",
+    "tool:Bash"
+   ]
+  }
+ ],
+ "passed": 20,
+ "total": 20
+}

@@ -1,0 +1,82 @@
+[
+ {
+  "query": "who calls the fail function in scripts/lint.sh? I need every path",
+  "should_trigger": true
+ },
+ {
+  "query": "is parseManifest dead code? nothing seems to import it",
+  "should_trigger": true
+ },
+ {
+  "query": "figure out what actually happens when a user clicks save, end to end",
+  "should_trigger": true
+ },
+ {
+  "query": "what touches the session cache? I want to change its format",
+  "should_trigger": true
+ },
+ {
+  "query": "trace how a webhook request flows from the route down to the database",
+  "should_trigger": true
+ },
+ {
+  "query": "what reaches deleteAccount? I need to know before I add a check there",
+  "should_trigger": true
+ },
+ {
+  "query": "why does the export job write twice? figure out what's going on in the code",
+  "should_trigger": true
+ },
+ {
+  "query": "map every caller of setFeatureFlag, including dynamic ones",
+  "should_trigger": true
+ },
+ {
+  "query": "before I remove the legacy auth middleware, prove nothing still goes through it",
+  "should_trigger": true
+ },
+ {
+  "query": "how does a config key end up changing the retry timer? follow it through",
+  "should_trigger": true
+ },
+ {
+  "query": "are you sure the README claim about 1024 characters is right? verify it",
+  "should_trigger": false
+ },
+ {
+  "query": "give me an overview of the whole repo structure",
+  "should_trigger": false
+ },
+ {
+  "query": "review my PR adversarially",
+  "should_trigger": false
+ },
+ {
+  "query": "add a caching layer to the api",
+  "should_trigger": false
+ },
+ {
+  "query": "what does idempotent mean?",
+  "should_trigger": false
+ },
+ {
+  "query": "rest or graphql for us? recommend one",
+  "should_trigger": false
+ },
+ {
+  "query": "double check the numbers in the release notes",
+  "should_trigger": false
+ },
+ {
+  "query": "list the files in scripts/",
+  "should_trigger": false
+ },
+ {
+  "query": "rename parseManifest to readManifest everywhere",
+  "should_trigger": false
+ },
+ {
+  "query": "summarize what changed in the last 5 commits",
+  "should_trigger": false
+ }
+]

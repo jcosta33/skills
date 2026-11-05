@@ -1,0 +1,82 @@
+[
+ {
+  "query": "review this top to bottom",
+  "should_trigger": true
+ },
+ {
+  "query": "do an adversarial review of my branch before I merge",
+  "should_trigger": true
+ },
+ {
+  "query": "tear this plan apart, every risk you can find",
+  "should_trigger": true
+ },
+ {
+  "query": "skeptic review of scripts/lint.sh please",
+  "should_trigger": true
+ },
+ {
+  "query": "I want an exhaustive review of the auth changes: security, data loss, concurrency, all of it",
+  "should_trigger": true
+ },
+ {
+  "query": "review this thoroughly:\n- if (n > 10) retry()\n+ if (n >= 10) retry()",
+  "should_trigger": true
+ },
+ {
+  "query": "multi-angle review of the migration spec, and fix whatever you find",
+  "should_trigger": true
+ },
+ {
+  "query": "go over this PR with fresh eyes, as many reviewers as it needs",
+  "should_trigger": true
+ },
+ {
+  "query": "is this design doc ready? review it hard before we commit to it",
+  "should_trigger": true
+ },
+ {
+  "query": "review my last 3 commits rigorously and fix what you find",
+  "should_trigger": true
+ },
+ {
+  "query": "is the README claim that lint rejects descriptions over 1024 characters true?",
+  "should_trigger": false
+ },
+ {
+  "query": "what checklist would you normally use for a code review?",
+  "should_trigger": false
+ },
+ {
+  "query": "who calls fail in scripts/lint.sh?",
+  "should_trigger": false
+ },
+ {
+  "query": "write a review of the movie Dune",
+  "should_trigger": false
+ },
+ {
+  "query": "rate my last commit message from 1 to 10",
+  "should_trigger": false
+ },
+ {
+  "query": "event sourcing or plain crud for the orders service? which should we go with",
+  "should_trigger": false
+ },
+ {
+  "query": "make this README section tighter",
+  "should_trigger": false
+ },
+ {
+  "query": "add input validation to the signup form",
+  "should_trigger": false
+ },
+ {
+  "query": "fix the lint error on line 40",
+  "should_trigger": false
+ },
+ {
+  "query": "what did the reviewer say on PR 12?",
+  "should_trigger": false
+ }
+]

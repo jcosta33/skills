@@ -1,0 +1,82 @@
+[
+ {
+  "query": "postgres or sqlite for the local cache? recommend one",
+  "should_trigger": true
+ },
+ {
+  "query": "monorepo or separate repos for the website and the app? which option",
+  "should_trigger": true
+ },
+ {
+  "query": "we can do offline sync with crdts, operational transforms, or last-write-wins. what do you recommend?",
+  "should_trigger": true
+ },
+ {
+  "query": "rest or graphql for the public api, pick one and justify it",
+  "should_trigger": true
+ },
+ {
+  "query": "help me choose a host: fly, render, or our own k8s",
+  "should_trigger": true
+ },
+ {
+  "query": "per seat, usage based, or flat pricing? what's the best approach for us",
+  "should_trigger": true
+ },
+ {
+  "query": "should the plugin system use wasm or js sandboxes? big decision, I need a recommendation",
+  "should_trigger": true
+ },
+ {
+  "query": "electron or tauri for the desktop shell? compare them and pick",
+  "should_trigger": true
+ },
+ {
+  "query": "build our own auth or use a provider like clerk or auth0?",
+  "should_trigger": true
+ },
+ {
+  "query": "which queue should we adopt: sqs, redis streams, or kafka? we can't easily undo this",
+  "should_trigger": true
+ },
+ {
+  "query": "what does the lint script do when a description contains a colon?",
+  "should_trigger": false
+ },
+ {
+  "query": "we already decided on postgres. set up the schema",
+  "should_trigger": false
+ },
+ {
+  "query": "is it true postgres can index jsonb? check",
+  "should_trigger": false
+ },
+ {
+  "query": "which version of node does this repo use?",
+  "should_trigger": false
+ },
+ {
+  "query": "review the auth design top to bottom",
+  "should_trigger": false
+ },
+ {
+  "query": "should I name this variable count or total?",
+  "should_trigger": false
+ },
+ {
+  "query": "I can't tell if you meant the staging or the prod config. which one should I edit?",
+  "should_trigger": false
+ },
+ {
+  "query": "what's the difference between sqs and kafka?",
+  "should_trigger": false
+ },
+ {
+  "query": "tighten this paragraph",
+  "should_trigger": false
+ },
+ {
+  "query": "implement the redis streams consumer we chose yesterday",
+  "should_trigger": false
+ }
+]

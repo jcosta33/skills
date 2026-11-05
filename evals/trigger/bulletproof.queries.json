@@ -1,0 +1,82 @@
+[
+ {
+  "query": "are you sure that's right? check it",
+  "should_trigger": true
+ },
+ {
+  "query": "did you actually verify the migration works or are you guessing?",
+  "should_trigger": true
+ },
+ {
+  "query": "double check every claim in the README install section before I share it",
+  "should_trigger": true
+ },
+ {
+  "query": "before I send this to the team, make sure each statement in docs/sources.md is accurate",
+  "should_trigger": true
+ },
+ {
+  "query": "you said all the tests pass. did you check?",
+  "should_trigger": true
+ },
+ {
+  "query": "verify this citation is real: Huang et al., ICLR 2024, shows models cannot self-correct reasoning",
+  "should_trigger": true
+ },
+ {
+  "query": "what assumptions is this plan resting on? the plan is to move CI to macos runners to match our dev machines",
+  "should_trigger": true
+ },
+ {
+  "query": "is it true that npx skills add removes skills that left the catalog? confirm with evidence",
+  "should_trigger": true
+ },
+ {
+  "query": "I'm about to rely on your summary of the lint rules. make sure every point holds",
+  "should_trigger": true
+ },
+ {
+  "query": "the agent says the feature is done. is it really done? check",
+  "should_trigger": true
+ },
+ {
+  "query": "who calls fail in scripts/lint.sh?",
+  "should_trigger": false
+ },
+ {
+  "query": "review the whole diff for security, performance, and correctness issues, every angle",
+  "should_trigger": false
+ },
+ {
+  "query": "what does disable-model-invocation do?",
+  "should_trigger": false
+ },
+ {
+  "query": "bun or node for our scripts? recommend one",
+  "should_trigger": false
+ },
+ {
+  "query": "implement a --verbose flag for scripts/lint.sh",
+  "should_trigger": false
+ },
+ {
+  "query": "fix the failing test in scripts/test-lint.sh",
+  "should_trigger": false
+ },
+ {
+  "query": "make this paragraph shorter without losing any facts",
+  "should_trigger": false
+ },
+ {
+  "query": "translate the README into Portuguese",
+  "should_trigger": false
+ },
+ {
+  "query": "how many skills are in the catalog?",
+  "should_trigger": false
+ },
+ {
+  "query": "trace how a description flows through lint.sh from the file to a failure",
+  "should_trigger": false
+ }
+]

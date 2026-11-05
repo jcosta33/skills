@@ -1,6 +1,6 @@
 ---
 name: revolver
-description: Review code, diffs, plans, or documents through a sequential rotation of fresh reviewers, one risk stance at a time, resolving every finding before the next reviewer. Use when work needs exhaustive scrutiny across every risk the target justifies. Do not use to check a single claim.
+description: Review code, diffs, plans, or documents through a sequential rotation of fresh reviewers, one risk stance at a time, resolving every finding before the next reviewer. Use when the user asks to review this top to bottom, for an adversarial, skeptical, or thorough review, or to tear it apart, even when the diff is small or pasted inline. Do not use to check a single claim.
 ---
 
 # Revolver
