@@ -16,6 +16,9 @@ siblings is broken.
 - Use untitled inline Markdown links. Reference-style and angle-bracket links are rejected.
 - Update the README catalog row with every skill addition or removal, and
   [`docs/sources.md`](docs/sources.md) when a sourced line changes or leaves.
+- Record each load-bearing decision as a new ADR in [`docs/adrs/`](docs/adrs/README.md) and add
+  its index row. Never edit an accepted ADR; supersede it. Research reports live in
+  [`docs/research/`](docs/research/README.md).
 
 ## Authoring rules
 

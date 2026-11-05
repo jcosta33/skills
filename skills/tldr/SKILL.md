@@ -7,5 +7,5 @@ disable-model-invocation: true
 # TLDR
 
 Keep only what changes a decision the user faces: outcome, required action, risk, cost, deadline,
-open choice. Decision first; drop background, process, and detail that would not change it. If
-nothing needs a decision, say so in one line.
+open choice, and the uncertainty that bears on it. Decision first; drop background, process, and
+detail that would not change it. If nothing needs a decision, say so in one line.

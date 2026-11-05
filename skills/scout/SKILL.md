@@ -10,4 +10,5 @@ Read-only: edit, commit, comment on, and file nothing.
 Read the target end to end (code, docs, issues, PRs, history as relevant) until you can explain it
 without guessing.
 Report what it is, its current state, what is broken or risky, open questions only the user can
-answer, and a recommended plan in priority order. Cite files, PRs, and issues by location.
+answer, and a recommended plan in priority order. Keep what you observed, each with its source,
+apart from what you assume and what is unknown. Cite files, PRs, and issues by location.

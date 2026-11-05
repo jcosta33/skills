@@ -41,7 +41,7 @@ Each runs only when you call it by name (`/name` in Claude Code, `$name` in Code
 | [`sitrep`](./skills/sitrep/SKILL.md)       | status from live git, GitHub, and tests             | a status report recalled from memory                            |
 | [`stepback`](./skills/stepback/SKILL.md)   | question whether the approach should exist          | polishing work that should be skipped or redone                 |
 | [`tldr`](./skills/tldr/SKILL.md)           | decision-only short version                         | a summary that buries the decision under process                |
-| [`wdyt`](./skills/wdyt/SKILL.md)           | one reasoned verdict with objections answered       | an opinion that never met its strongest objection               |
+| [`wdyt`](./skills/wdyt/SKILL.md)           | judge the user's own idea to one verdict            | agreeing with an idea because it is the user's                  |
 | [`whatsnext`](./skills/whatsnext/SKILL.md) | one recommended next step and why                   | a menu of options with no pick                                  |
 
 Micro skills set `disable-model-invocation: true` and ship `agents/openai.yaml` with
@@ -51,7 +51,7 @@ asks". claude.ai uploads and the Skills API reject the frontmatter key.
 
 None of these writes a document of its own; each answers in chat or edits its target. Skills that
 write Corpus artifacts ship with [Corpus](https://github.com/jcosta33/corpus). Sources behind the
-skills: [`docs/sources.md`](./docs/sources.md).
+skills: [`docs/sources.md`](./docs/sources.md). Decisions: [`docs/adrs`](./docs/adrs/README.md).
 
 ## Security
 

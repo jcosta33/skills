@@ -2,6 +2,8 @@
 
 Each entry backs a line a skill or the edit contract still carries. Primary sources first; bound
 practitioner material by its setup. Remove an entry when its line leaves, and replace a dead link.
+Decisions and their evidence are in [`adrs/`](adrs/README.md); the research reports behind them are
+in [`research/`](research/README.md).
 
 ## Skill format and length
 
@@ -95,3 +97,62 @@ practitioner material by its setup. Remove an entry when its line leaves, and re
   their own output; reviewers must be fresh. https://arxiv.org/abs/2410.21819
 - **Primers or reminders?** Spadini, Calikli, and Bacchelli, ICSE 2020. Visible prior comments steer
   later reviewers; hide peer prose. https://doi.org/10.1145/3377811.3380385
+
+## wdyt
+
+ADR-0012 maps each line to these.
+
+- **Scorekeeping in a Language Game.** Lewis, J. Philosophical Logic 1979. Presuppositions are
+  accommodated unless someone objects. https://andrewmbailey.com/dkl/Scorekeeping_in_a_Language_Game.pdf
+- **FPBench.** Li et al., 2025 preprint. Code generators reason poorly under faulty premises.
+  https://arxiv.org/abs/2508.03622
+- **CRITIC.** Gou et al., 2023 preprint. Self-correction works when critique uses external tools.
+  https://arxiv.org/abs/2305.11738
+- **Automating Alternative Generation in Decision-Making.** Kostiuk, Seyfried, and Reed, Findings
+  of EMNLP 2025. LLM and human options barely overlap. https://aclanthology.org/2025.findings-emnlp.1/
+- **Artificial Hivemind.** Jiang et al., NeurIPS 2025 D&B. Open-ended model outputs converge.
+  https://arxiv.org/abs/2510.22954
+- **Critical Questions Generation shared task.** Calvo Figueras et al., ArgMining 2025. Critical
+  questions for practical reasoning, after Walton, Reed, and Macagno (CUP 2008).
+  https://aclanthology.org/2025.argmining-1.23/
+- **Devil's Advocate: Anticipatory Reflection for LLM Agents.** Wang et al., Findings of EMNLP
+  2024. Considering failure before acting raised success with fewer trials.
+  https://arxiv.org/abs/2405.16334
+- **LLMs Help Humans Verify Truthfulness, Except When They Are Convincingly Wrong.** Si et al.,
+  NAACL 2024. For-and-against explanations lowered accuracy on right answers.
+  https://aclanthology.org/2024.naacl-long.81/
+- **What large language models know and what people think they know.** Steyvers et al., Nature
+  Machine Intelligence 2025. Longer explanations raised confidence without better discrimination.
+  https://mstrep.s3.amazonaws.com/publications/WhatLLMsKnowSteyversetal.pdf
+- **Prompting Claude Opus 5, Anthropic.** Requests for written-out thinking can be declined
+  (`reasoning_extraction`). https://platform.claude.com/docs/en/build-with-claude/prompt-engineering/prompting-claude-opus-5
+- **The FlipFlop Experiment.** Laban et al., 2023 preprint. "Are you sure?" flips answers and cuts
+  accuracy. https://arxiv.org/abs/2311.08596
+- **Asserting.** Brandom, Noûs 1983. An assertion stands until a challenge defeats it.
+  https://sites.pitt.edu/~rbrandom/Courses/2022%20Phil%20of%20Language/Reasons%20texts/Asserting.pdf
+- System 2 Attention, Towards Understanding Sycophancy (under settle), and TiCoder (under drill)
+  also back wdyt lines.
+
+## Micro skills
+
+ADR-0013 maps each line to these.
+
+- **LLMs Get Lost In Multi-Turn Conversation.** Laban et al., 2025 preprint. A specification spread
+  over turns costs 39% on average. https://arxiv.org/abs/2505.06120
+- **LLMs Remember First, Forget Last.** Chattaraj and Raj, 2026 preprint. Models return superseded
+  values. https://arxiv.org/abs/2603.00270
+- **Unable to Forget.** Wang and Sun, 2025 preprint. Proactive interference limits retrieval of
+  updated values. https://arxiv.org/abs/2506.08184
+- **Teamwork.** Cohen and Levesque, Noûs 1991, read via Tambe, JAIR 1997. A joint goal holds until
+  it is known achieved, unachievable, or irrelevant. https://arxiv.org/abs/cs/9709101
+- **Common Ground.** Stalnaker, Linguistics and Philosophy 2002. Only what is mutually accepted is
+  shared. https://semantics.uchicago.edu/kennedy/classes/f07/pragmatics/stalnaker02.pdf
+- **Programming as Theory Building.** Naur, Microprocessing and Microprogramming 1985.
+  Documentation cannot carry the program's theory; state where a change goes before editing.
+- **Contextual Bias in LLM-Assisted Security Code Review.** Mitropoulos et al., 2026 preprint.
+  Author framing defeats review; redaction restored rejections. https://arxiv.org/abs/2603.18740
+- **Why Do Multi-Agent LLM Systems Fail?** Cemri et al., 2025 preprint. 12.4% of failure traces
+  missed when to stop. https://arxiv.org/abs/2503.13657
+- **Quantifying Overclaiming Propensity in Frontier LLM Agents.** Smyth et al., 2026 preprint.
+  80.4% of incomplete reviews were reported misleadingly. https://arxiv.org/abs/2609.20812
+- Asserting (Brandom) and the critical questions (Walton) above also back micro-skill lines.

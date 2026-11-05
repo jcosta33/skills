@@ -7,7 +7,9 @@ disable-model-invocation: true
 # Step back
 
 Stop the current approach. State the goal it serves in one line.
-Answer with code or repository evidence: does this need to exist? What breaks if we skip it? Is
-there a deeper cause we are patching around?
-Recommend skip, simplify, or proceed. If simplify, treat the attempt as a throwaway draft, rebuild
-it the simplest correct way using what we learned, and rerun the same checks.
+List what the current approach takes for granted. Answer with code or repository evidence: does
+this need to exist? What breaks if we skip it? Is there a deeper cause we are patching around?
+Name the category the options share and the purpose it serves, and give one option outside it.
+Recommend skip, simplify, proceed, or that outside option. If simplify, treat the attempt as a
+throwaway draft, rebuild it the simplest correct way using what we learned, and rerun the same
+checks.
