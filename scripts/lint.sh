@@ -67,6 +67,10 @@ for name in $skills; do
       fail "$name names sibling skill $other"
     fi
   done
+  # Plain steps only: no thinker, school, or method names anywhere in a skill.
+  if grep -Eiq "(^|[^[:alnum:]])(philosoph[a-z]*|plato(nic)?|socrat(es|ic)|aristotle|kant(ian)?|popper(ian)?|peirce|mill's|hume|stoics?|disputatio|dialectic(al|s)?|pre-?mortems?|steel-?man(ning|ned)?|devil'?s advocate|antinom(y|ies)|diairesis|toulmin|wittgenstein|grice|leibniz|descartes|hegel)([^[:alnum:]]|\$)" "$file"; then
+    fail "$name names a thinker or method; ship the plain steps"
+  fi
   if grep -Eq '\]\([^)#:]*\)' "$file"; then
     fail "$name has a relative link"
   fi

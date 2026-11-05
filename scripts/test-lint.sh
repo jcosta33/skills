@@ -30,6 +30,7 @@ for case in \
   'agents-extra:nested payload' \
   'self-name:names its own skill' \
   'sibling-name:names sibling skill' \
+  'method-name:names a thinker or method' \
   'broken-link:broken link'; do
   mutation=${case%%:*}
   expected=${case#*:}
@@ -58,6 +59,7 @@ license: MIT/' "$file" > "$file.tmp" && mv "$file.tmp" "$file" ;;
     agents-extra) printf 'x\n' > "$fixture/skills/$micro/agents/notes.md" ;;
     self-name) sed "s/^description: .*/description: Use $skill now./" "$file" > "$file.tmp" && mv "$file.tmp" "$file" ;;
     sibling-name) printf '\nThen run %s.\n' "$other" >> "$file" ;;
+    method-name) printf '\nRun a Premortem first.\n' >> "$file" ;;
     broken-link) printf '\n[gone](./missing.md)\n' >> "$fixture/README.md" ;;
   esac
 
@@ -74,4 +76,4 @@ license: MIT/' "$file" > "$file.tmp" && mv "$file.tmp" "$file" ;;
   esac
 done
 
-echo "test-lint: OK (16 mutations killed)"
+echo "test-lint: OK (17 mutations killed)"

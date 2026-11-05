@@ -19,7 +19,9 @@ siblings is broken.
 
 ## Authoring rules
 
-- Write plain steps with a checkable output. No persona lines, and no method names in bodies.
+- Write plain steps with a checkable output. No persona lines. No thinker, school, or method names
+  (philosophy, Kant, Popper, disputatio, premortem, steelman, and the like) anywhere in a skill; lint
+  rejects them. Credit sources in [`docs/sources.md`](docs/sources.md).
 - Keep at most 10 load-bearing rules, most important first; models favor earlier instructions.
 - Write "If C, do X". No hedges or modal verbs.
 - End with **Done when** plus an observable check, or with the exact output to return.
