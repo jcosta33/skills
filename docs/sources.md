@@ -38,6 +38,14 @@ practitioner material by its setup. Remove an entry when its line leaves, and re
 - **Choice overload meta-analysis.** Scheibehenne, Greifeneder, and Todd, JCR 2010. No universal
   optimum option count; a small set with a recommendation is a convention, not a law.
   https://doi.org/10.1086/651235
+- **System 2 Attention.** Weston and Sukhbaatar, 2023 preprint. Regenerating the context without the
+  asker's opinion reduced sycophantic answers. https://arxiv.org/abs/2311.11829
+- **Towards Understanding Sycophancy in Language Models.** Sharma et al., 2023 preprint. Models bend
+  answers toward the user's stated view. https://arxiv.org/abs/2310.13548
+- **AbstentionBench.** Kirichenko et al., 2025 preprint. Models rarely say a question cannot be
+  answered from what they have. https://arxiv.org/abs/2506.09038
+- **Structured Uncertainty Guided Clarification for LLM Agents.** Suri et al., Findings of ACL 2026,
+  pp. 40811–40838. Ask only about what changes the action, one decisive question.
 
 ## bulletproof and panel
 
@@ -50,7 +58,19 @@ practitioner material by its setup. Remove an entry when its line leaves, and re
 - **Voting or Consensus?** Findings of ACL 2025. No universal aggregation rule; keep dissent.
   https://aclanthology.org/2025.findings-acl.606/
 
+## dissect
+
+- **POPPER.** Huang et al., 2025 preprint. Hypothesis checks that state their falsifying result
+  first, with only tests that could fail. https://arxiv.org/abs/2502.09858
+- **Corr2Cause.** Jin et al., ICLR 2024. Models infer causation from correlation; a cause needs an
+  intervention. https://arxiv.org/abs/2306.05836
+
 ## debloat
+
+- **IFScale.** Jaroslawicz et al., 2025 preprint. Compliance falls with instruction count, and
+  models favor earlier instructions. https://arxiv.org/abs/2507.11538
+- **Claude Code commands.** `/doctor prompt-audit` checks instruction files for outdated or
+  conflicting instructions. https://code.claude.com/docs/en/commands
 
 - **Token Reduction Is Not Cost Reduction.** Weinberger and Hozez, 2026 preprint. Lossy compression
   damaged exact anchors. https://arxiv.org/abs/2607.12161
@@ -61,6 +81,8 @@ practitioner material by its setup. Remove an entry when its line leaves, and re
 
 - **sgruetter top-down.** MIT practitioner skill: level order, behavior before machinery, reuse
   first. No `CONTEXT.md` adopted. https://github.com/sgruetter/skills/tree/main/skills/top-down
+- **TiCoder.** Lahiri et al., 2022 preprint. Intent stated as checkable tests raised pass@1 by 22–54
+  points. https://arxiv.org/abs/2208.05950
 
 ## revolver
 

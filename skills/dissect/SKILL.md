@@ -14,5 +14,7 @@ description: Trace one unfamiliar or dangerous code path to closure, proving eve
 4. Trace every branch to its terminal effects: retries, fallbacks, cleanup, cancellation, error
    translation, async continuations, state changes, persistence, caches, and external effects. Then
    invalid input, partial state, concurrency, time, exhaustion, dependency failure, and recovery.
-5. Return the question, the state, the flow from entry through decisive branches to terminal
+5. Before each probe, write the result that would refute what you expect; count only probes that
+   could fail. Claim a cause only from a difference you produced: bisect, revert, or toggle.
+6. Return the question, the state, the flow from entry through decisive branches to terminal
    effects, and a table of `path:line`, proven edge, and `Unknown` with the missing proof.
