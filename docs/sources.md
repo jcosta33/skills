@@ -71,6 +71,11 @@ practitioner material by its setup. Remove an entry when its line leaves, and re
   models favor earlier instructions. https://arxiv.org/abs/2507.11538
 - **Claude Code commands.** `/doctor prompt-audit` checks instruction files for outdated or
   conflicting instructions. https://code.claude.com/docs/en/commands
+- **Harness-IF.** Huang et al., 2026 preprint. Coding agents follow rules that oppose their defaults
+  3.6–7.4 points less often than other rules. https://arxiv.org/abs/2608.11727
+- **Evaluating AGENTS.md.** Gloaguen et al., 2026 preprint. Agents follow repository instructions
+  they would not apply unprompted; generic overviews did not help.
+  https://arxiv.org/html/2602.11988
 
 - **Token Reduction Is Not Cost Reduction.** Weinberger and Hozez, 2026 preprint. Lossy compression
   damaged exact anchors. https://arxiv.org/abs/2607.12161
