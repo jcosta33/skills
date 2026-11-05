@@ -17,9 +17,11 @@ catalog=$(printf '%s\n' "$rows" | awk 'NF { print ($1 == $2 ? $1 : "label-mismat
 [ -n "$skills" ] || fail "skills/ is empty"
 [ "$skills" = "$catalog" ] || fail "README catalog does not match skills/"
 
-# Payload: one regular Markdown file per skill folder, nothing else.
-[ -z "$(find "$ROOT/skills" -mindepth 3)" ] || fail "nested payload under skills/"
-[ -z "$(find "$ROOT/skills" -mindepth 2 -maxdepth 2 ! \( -type f -name SKILL.md \))" ] ||
+# Payload: one regular SKILL.md per folder, plus agents/openai.yaml for a user-invoked skill.
+[ -z "$(find "$ROOT/skills" -mindepth 4)" ] || fail "nested payload under skills/"
+[ -z "$(find "$ROOT/skills" -mindepth 3 -maxdepth 3 ! \( -type f -path '*/agents/openai.yaml' \))" ] ||
+  fail "nested payload under skills/"
+[ -z "$(find "$ROOT/skills" -mindepth 2 -maxdepth 2 ! \( -type f -name SKILL.md \) ! \( -type d -name agents \))" ] ||
   fail "skill folder holds something other than SKILL.md"
 
 for name in $skills; do
@@ -27,20 +29,31 @@ for name in $skills; do
   [ -f "$file" ] || fail "missing $file"
 
   # Frontmatter: exactly name (= folder) and a one-line, YAML-safe description; optionally
-  # disable-model-invocation (outside the spec; claude.ai uploads reject it).
+  # disable-model-invocation (outside the spec; claude.ai uploads reject it). No other key.
+  key=$(awk 'NR > 1 && $0 == "---" { exit } NR > 1 && !/^(name|description|disable-model-invocation): / { print; exit }' "$file")
+  [ -z "$key" ] || fail "unknown frontmatter key in $name: $key"
   awk -v expected="$name" '
     NR == 1 { if ($0 != "---") exit 1; inside = 1; next }
     inside && $0 == "---" { closed = 1; exit }
     inside && /^name: / { names++; if (substr($0, 7) != expected) exit 1; next }
     inside && /^description: / {
       value = substr($0, 14); descriptions++
-      if (length(value) > 1024 || value !~ /^[[:alpha:]]/ || value ~ /:[[:space:]]/ || value ~ /[[:space:]]#/) exit 1
+      if (length(value) > 1024 || value !~ /^[[:alpha:]]/ || value ~ /:[[:space:]]/ || value ~ /[[:space:]]#/ || value ~ /[<>]/) exit 1
       next
     }
     inside && /^disable-model-invocation: (true|false)$/ { invocations++; next }
     inside { exit 1 }
     END { if (!closed || names != 1 || descriptions != 1 || invocations > 1) exit 1 }
   ' "$file" || fail "invalid frontmatter: $name"
+
+  # A user-invoked skill also tells Codex: agents/openai.yaml holds exactly the policy below.
+  yaml="$ROOT/skills/$name/agents/openai.yaml"
+  if grep -qx 'disable-model-invocation: true' "$file"; then
+    [ -f "$yaml" ] && [ "$(cat "$yaml")" = "$(printf 'policy:\n  allow_implicit_invocation: false')" ] ||
+      fail "user-invoked skill needs agents/openai.yaml with allow_implicit_invocation false: $name"
+  elif [ -e "$ROOT/skills/$name/agents" ]; then
+    fail "agents/ without disable-model-invocation: true: $name"
+  fi
 
   description=$(sed -n 's/^description: //p' "$file" | head -n 1)
   if printf '%s\n' "$description" | grep -Eqi "(^|[^[:alnum:]-])$name([^[:alnum:]-]|$)"; then

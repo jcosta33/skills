@@ -1,6 +1,6 @@
 ---
 name: tldr
-description: Answer with only what the user must know to decide. Use when the user asks for the short version, the gist, or what matters here. Do not use for full explanations or for rewriting a supplied document.
+description: Answer with only what the user must know to decide. Use only when the user asks for the short version, the gist, or what matters here. Do not use for full explanations or for rewriting a supplied document.
 disable-model-invocation: true
 ---
 

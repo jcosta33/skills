@@ -25,6 +25,9 @@ practitioner material by its setup. Remove an entry when its line leaves, and re
 - **Claude Code skills.** `disable-model-invocation` keeps a skill to explicit `/name` use; claude.ai
   uploads and the Skills API reject keys outside the spec. https://code.claude.com/docs/en/skills
 - **Cursor skills.** Honours `disable-model-invocation`. https://cursor.com/docs/context/skills
+- **Codex `agents/openai.yaml` reference.** `policy.allow_implicit_invocation: false` keeps a skill
+  out of model context until called as `$name`. Ships with Codex as
+  `~/.codex/skills/.system/skill-creator/references/openai_yaml.md`.
 - **Vercel skills CLI.** Global and per-agent install; `add` does not remove departed skills.
   https://github.com/vercel-labs/skills
 

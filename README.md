@@ -29,13 +29,25 @@ entry go too.
 
 ### Micro
 
-| Skill                                          | Use                                                  | Failure it prevents                                               |
-| ---------------------------------------------- | ---------------------------------------------------- | ----------------------------------------------------------------- |
-| [`tldr`](./skills/tldr/SKILL.md)               | decision-only short version, on request (`/tldr`)    | a summary that buries the decision under process                  |
+Each runs only when you call it by name (`/name` in Claude Code, `$name` in Codex).
 
-`tldr` sets `disable-model-invocation: true`, which is outside the Agent Skills spec. Claude Code,
-Cursor, and VS Code Copilot then run it only on `/tldr`. Codex and Gemini CLI ignore the key, so
-there it can trigger on its description. claude.ai uploads and the Skills API reject it.
+| Skill                                      | Use                                                 | Failure it prevents                                             |
+| ------------------------------------------ | --------------------------------------------------- | --------------------------------------------------------------- |
+| [`handoff`](./skills/handoff/SKILL.md)     | paste-ready brief for a fresh agent, in chat        | a successor that redoes finished work or misses a trap          |
+| [`onward`](./skills/onward/SKILL.md)       | keep going to the stop condition                    | stopping for check-ins the rules already allow                  |
+| [`proper`](./skills/proper/SKILL.md)       | audit the last change for shortcuts and extra scope | stubs, masking fallbacks, and unrequested edits shipped as done |
+| [`rearm`](./skills/rearm/SKILL.md)         | re-read the rules and branch state, then resume     | rules that decayed mid-session                                  |
+| [`scout`](./skills/scout/SKILL.md)         | learn a target read-only, then report back          | edits made while only a report was asked for                    |
+| [`sitrep`](./skills/sitrep/SKILL.md)       | status from live git, GitHub, and tests             | a status report recalled from memory                            |
+| [`stepback`](./skills/stepback/SKILL.md)   | question whether the approach should exist          | polishing work that should be skipped or redone                 |
+| [`tldr`](./skills/tldr/SKILL.md)           | decision-only short version                         | a summary that buries the decision under process                |
+| [`wdyt`](./skills/wdyt/SKILL.md)           | one reasoned verdict with objections answered       | an opinion that never met its strongest objection               |
+| [`whatsnext`](./skills/whatsnext/SKILL.md) | one recommended next step and why                   | a menu of options with no pick                                  |
+
+Micro skills set `disable-model-invocation: true` and ship `agents/openai.yaml` with
+`allow_implicit_invocation: false`. Claude Code, Cursor, and VS Code Copilot honour the first, Codex
+the second. Gemini CLI honours neither, so each description also says "Use only when the user
+asks". claude.ai uploads and the Skills API reject the frontmatter key.
 
 None of these writes a document of its own; each answers in chat or edits its target. Skills that
 write Corpus artifacts ship with [Corpus](https://github.com/jcosta33/corpus). Sources behind the
@@ -44,4 +56,4 @@ skills: [`docs/sources.md`](./docs/sources.md).
 ## Security
 
 Inspect instructions before installation: you are installing words into an agent's head. Payloads
-are Markdown only. The shell scripts under `scripts/` lint this repository and never ship.
+are Markdown, plus a two-line Codex policy file in each micro skill. The shell scripts under `scripts/` lint this repository and never ship.

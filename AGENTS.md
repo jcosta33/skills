@@ -5,7 +5,9 @@ siblings is broken.
 
 ## Edit contract
 
-- One `skills/<name>/SKILL.md` per skill and nothing else in the folder.
+- One `skills/<name>/SKILL.md` per skill. The only other file allowed is `agents/openai.yaml`, holding
+  exactly `policy: {allow_implicit_invocation: false}` (block style), in a skill that sets
+  `disable-model-invocation: true`.
 - Frontmatter holds `name` (the folder name) and a one-line `description`: the action, the real
   trigger in task language, and the nearest exclusion. Never name the skill itself or a sibling.
 - Keep only lines that change what a strong model does. Cut good practice it already follows,
