@@ -27,7 +27,7 @@ for name in $skills; do
   [ -f "$file" ] || fail "missing $file"
 
   # Frontmatter: exactly name (= folder) and a one-line, YAML-safe description; optionally
-  # disable-model-invocation (Claude Code; other harnesses ignore it).
+  # disable-model-invocation (outside the spec; claude.ai uploads reject it).
   awk -v expected="$name" '
     NR == 1 { if ($0 != "---") exit 1; inside = 1; next }
     inside && $0 == "---" { closed = 1; exit }

@@ -22,8 +22,9 @@ practitioner material by its setup. Remove an entry when its line leaves, and re
 - **Claude Code skill activation experiment, Ivan Seleznov.** One unpinned setup: directive
   descriptions activated more often. Backs `ALWAYS` in `settle` only.
   https://github.com/SeleznovIvan/claude-skills-test
-- **Claude Code skills.** `disable-model-invocation` keeps a skill to explicit `/name` use; it is a
-  Claude Code extension. https://code.claude.com/docs/en/skills
+- **Claude Code skills.** `disable-model-invocation` keeps a skill to explicit `/name` use; claude.ai
+  uploads and the Skills API reject keys outside the spec. https://code.claude.com/docs/en/skills
+- **Cursor skills.** Honours `disable-model-invocation`. https://cursor.com/docs/context/skills
 - **Vercel skills CLI.** Global and per-agent install; `add` does not remove departed skills.
   https://github.com/vercel-labs/skills
 

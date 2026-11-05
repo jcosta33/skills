@@ -33,9 +33,9 @@ entry go too.
 | ---------------------------------------------- | ---------------------------------------------------- | ----------------------------------------------------------------- |
 | [`tldr`](./skills/tldr/SKILL.md)               | decision-only short version, on request (`/tldr`)    | a summary that buries the decision under process                  |
 
-`tldr` sets `disable-model-invocation: true`, a Claude Code field outside the Agent Skills spec.
-Codex uses its own `agents/openai.yaml` instead, so outside Claude Code it can also trigger on its
-description.
+`tldr` sets `disable-model-invocation: true`, which is outside the Agent Skills spec. Claude Code,
+Cursor, and VS Code Copilot then run it only on `/tldr`. Codex and Gemini CLI ignore the key, so
+there it can trigger on its description. claude.ai uploads and the Skills API reject it.
 
 None of these writes a document of its own; each answers in chat or edits its target. Skills that
 write Corpus artifacts ship with [Corpus](https://github.com/jcosta33/corpus). Sources behind the
