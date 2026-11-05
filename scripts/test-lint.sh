@@ -20,6 +20,7 @@ for case in \
   'nested-file:nested payload' \
   'symlink:holds something other than SKILL.md' \
   'yaml-colon:invalid frontmatter' \
+  'long-description:invalid frontmatter' \
   'bad-invocation:invalid frontmatter' \
   'unknown-key:unknown frontmatter key' \
   'angle-bracket:invalid frontmatter' \
@@ -36,6 +37,7 @@ for case in \
   mkdir -p "$fixture"
   cp -R "$ROOT/README.md" "$ROOT/AGENTS.md" "$ROOT/skills" "$ROOT/scripts" "$fixture/"
   [ -d "$ROOT/docs" ] && cp -R "$ROOT/docs" "$fixture/"
+  chmod -R u+w "$fixture"
   file="$fixture/skills/$skill/SKILL.md"
 
   case "$mutation" in
@@ -44,6 +46,7 @@ for case in \
     nested-file) mkdir "$fixture/skills/$skill/references" && printf 'x\n' > "$fixture/skills/$skill/references/x.md" ;;
     symlink) ln -s SKILL.md "$fixture/skills/$skill/alias.md" ;;
     yaml-colon) sed 's/^description: .*/description: Broken: YAML/' "$file" > "$file.tmp" && mv "$file.tmp" "$file" ;;
+    long-description) long=$(printf '%1025s' '' | tr ' ' x) && sed "s/^description: .*/description: $long/" "$file" > "$file.tmp" && mv "$file.tmp" "$file" ;;
     bad-invocation) sed 's/^name: .*/&\
 disable-model-invocation: yes/' "$file" > "$file.tmp" && mv "$file.tmp" "$file" ;;
     unknown-key) sed 's/^name: .*/&\
@@ -71,4 +74,4 @@ license: MIT/' "$file" > "$file.tmp" && mv "$file.tmp" "$file" ;;
   esac
 done
 
-echo "test-lint: OK (15 mutations killed)"
+echo "test-lint: OK (16 mutations killed)"
