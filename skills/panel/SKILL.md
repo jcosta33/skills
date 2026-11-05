@@ -1,6 +1,7 @@
 ---
 name: panel
-description: Recommend one option after independent analyses of real alternatives. Use when the user asks which option to pick, X or Y, or what you recommend between approaches for a consequential technical, product, or operational choice that evidence alone cannot decide, even when one option looks obvious. Do not use when evidence already decides it or the user has stated a decision.
+description: Recommend one option after independent analyses of real alternatives. Use only when the user asks which option to pick, X or Y, or what you recommend between approaches for a consequential technical, product, or operational choice. Do not use when evidence already decides it or the user has stated a decision.
+disable-model-invocation: true
 ---
 
 # Panel

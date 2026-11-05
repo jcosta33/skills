@@ -5,9 +5,11 @@ siblings is broken.
 
 ## Edit contract
 
-- One `skills/<name>/SKILL.md` per skill. The only other file allowed is `agents/openai.yaml`, holding
-  exactly `policy: {allow_implicit_invocation: false}` (block style), in a skill that sets
-  `disable-model-invocation: true`.
+- One `skills/<name>/SKILL.md` per skill, plus `agents/openai.yaml` holding exactly
+  `policy: {allow_implicit_invocation: false}` (block style). Every skill sets
+  `disable-model-invocation: true` and says "Use only when the user" in its description: skills
+  are manual follow-ups to a failure, never auto-triggered. Every-turn rules belong in AGENTS.md
+  or hooks.
 - Frontmatter holds `name` (the folder name) and a one-line `description`: the action, the real
   trigger in task language, and the nearest exclusion. Never name the skill itself or a sibling.
 - Change a skill only for a witnessed failure. Record the failure and the with/without result in the
@@ -35,7 +37,8 @@ siblings is broken.
 
 ## Trigger eval
 
-Gate every description change with the method of Anthropic's skill-creator (`run_eval.py`).
+No skill is model-invoked, so descriptions now serve the `/name` menu. Run this eval before any
+skill becomes model-invocable again, using the method of Anthropic's skill-creator (`run_eval.py`).
 
 1. Write about 20 queries in the user's own words: half should trigger, half are near misses that
    share keywords but need another skill or none.

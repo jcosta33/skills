@@ -21,9 +21,8 @@ in [`research/`](research/README.md).
   https://arxiv.org/abs/2608.01347
 - **Curse of Instructions.** Harada et al., ICLR 2025. Joint compliance falls as instruction count
   grows. https://openreview.net/forum?id=R6q67CDBCH
-- **Claude Code skill activation experiment, Ivan Seleznov.** One unpinned setup: directive
-  descriptions activated more often. Backs `ALWAYS` in `settle` only.
-  https://github.com/SeleznovIvan/claude-skills-test
+- **Claude Code hooks.** A rule that must hold every time belongs in a hook or in always-loaded
+  instructions, not in a skill. Backs manual-only skills (ADR-0014). https://code.claude.com/docs/en/hooks
 - **Claude Code skills.** `disable-model-invocation` keeps a skill to explicit `/name` use; claude.ai
   uploads and the Skills API reject keys outside the spec. https://code.claude.com/docs/en/skills
 - **Cursor skills.** Honours `disable-model-invocation`. https://cursor.com/docs/context/skills
@@ -156,3 +155,12 @@ ADR-0013 maps each line to these.
 - **Quantifying Overclaiming Propensity in Frontier LLM Agents.** Smyth et al., 2026 preprint.
   80.4% of incomplete reviews were reported misleadingly. https://arxiv.org/abs/2609.20812
 - Asserting (Brandom) and the critical questions (Walton) above also back micro-skill lines.
+
+## despaghettify
+
+ADR-0015 maps each line to these.
+
+- **SkillsBench.** Li et al., 2026 preprint. Compact and standard skills added 19–21.5 points;
+  comprehensive ones added 0.7. Backs the narrow scope and short body. https://arxiv.org/abs/2602.12670
+- **Prompting Claude Opus 5, Anthropic** (under wdyt). Recipes for the wanted shape work better
+  than prohibitions; backs the pattern-to-rewrite list.

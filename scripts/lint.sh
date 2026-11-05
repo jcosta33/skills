@@ -46,16 +46,19 @@ for name in $skills; do
     END { if (!closed || names != 1 || descriptions != 1 || invocations > 1) exit 1 }
   ' "$file" || fail "invalid frontmatter: $name"
 
-  # A user-invoked skill also tells Codex: agents/openai.yaml holds exactly the policy below.
+  # Every skill is user-invoked only: the frontmatter flag, plus agents/openai.yaml holding exactly
+  # the policy below for Codex, plus a description that says so for harnesses that honour neither.
+  grep -qx 'disable-model-invocation: true' "$file" ||
+    fail "skill must set disable-model-invocation: true: $name"
   yaml="$ROOT/skills/$name/agents/openai.yaml"
-  if grep -qx 'disable-model-invocation: true' "$file"; then
-    [ -f "$yaml" ] && [ "$(cat "$yaml")" = "$(printf 'policy:\n  allow_implicit_invocation: false')" ] ||
-      fail "user-invoked skill needs agents/openai.yaml with allow_implicit_invocation false: $name"
-  elif [ -e "$ROOT/skills/$name/agents" ]; then
-    fail "agents/ without disable-model-invocation: true: $name"
-  fi
+  [ -f "$yaml" ] && [ "$(cat "$yaml")" = "$(printf 'policy:\n  allow_implicit_invocation: false')" ] ||
+    fail "user-invoked skill needs agents/openai.yaml with allow_implicit_invocation false: $name"
 
   description=$(sed -n 's/^description: //p' "$file" | head -n 1)
+  case "$description" in
+    *"Use only when the user"*) ;;
+    *) fail "description must say \"Use only when the user\": $name" ;;
+  esac
   if printf '%s\n' "$description" | grep -Eqi "(^|[^[:alnum:]-])$name([^[:alnum:]-]|$)"; then
     fail "description names its own skill: $name"
   fi

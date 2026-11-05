@@ -1,6 +1,7 @@
 ---
 name: settle
-description: Resolve ambiguity that would stop work, by direct evidence first and by a structured choice only for what the user owns. ALWAYS use when work would stop for a technical question, conflicting evidence, or an unmade choice, and before asking the user anything. Do not use to answer the user's own factual questions.
+description: Resolve ambiguity that stops work, by direct evidence first and by a structured choice only for what the user owns. Use only when the user asks to resolve a technical question, conflicting evidence, or an unmade choice that blocks the work. Do not use to answer the user's own factual questions.
+disable-model-invocation: true
 ---
 
 # Settle

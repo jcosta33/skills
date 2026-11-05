@@ -1,6 +1,7 @@
 ---
 name: debloat
-description: Tighten supplied prose without losing any fact, rule, or warning. Use when a document, instruction file, or message is repetitive, hedged, or padded. Do not use for source code, commit messages, or forms a repository prescribes.
+description: Tighten supplied prose without losing any fact, rule, or warning. Use only when the user asks to tighten, trim, or cut padding from a document, instruction file, or message. Do not use for source code, commit messages, or forms a repository prescribes.
+disable-model-invocation: true
 ---
 
 # Debloat

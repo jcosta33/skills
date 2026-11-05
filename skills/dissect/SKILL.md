@@ -1,6 +1,7 @@
 ---
 name: dissect
-description: Trace one code path to closure, proving every entry, caller, branch, state change, and effect. Use when the user asks who calls this, what reaches or touches it, how it flows, whether it is dead code, or to figure out what is really happening in some code, even when a quick search seems to answer it. Do not use to check claims or assumptions, or to map a whole area.
+description: Trace one code path to closure, proving every entry, caller, branch, state change, and effect. Use only when the user asks who calls this, what reaches or touches it, how it flows, whether it is dead code, or to figure out what is really happening in some code. Do not use to check claims or assumptions, or to map a whole area.
+disable-model-invocation: true
 ---
 
 # Dissect

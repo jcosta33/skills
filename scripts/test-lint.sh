@@ -11,8 +11,6 @@ sh "$ROOT/scripts/lint.sh" "$ROOT" >/dev/null
 
 skill=$(find "$ROOT/skills" -mindepth 1 -maxdepth 1 -type d -exec basename {} \; | sort | head -n 1)
 other=$(find "$ROOT/skills" -mindepth 1 -maxdepth 1 -type d -exec basename {} \; | sort | sed -n 2p)
-micro=$(find "$ROOT/skills" -mindepth 3 -maxdepth 3 -path '*/agents/openai.yaml' | sort | head -n 1 | awk -F/ '{ print $(NF - 2) }')
-[ -n "$micro" ] || { echo "test-lint: no user-invoked skill to mutate" >&2; exit 1; }
 
 for case in \
   'missing-skill:README catalog does not match' \
@@ -26,7 +24,8 @@ for case in \
   'angle-bracket:invalid frontmatter' \
   'missing-yaml:needs agents/openai.yaml' \
   'bad-yaml:needs agents/openai.yaml' \
-  'stray-agents:agents/ without' \
+  'model-invoked:must set disable-model-invocation' \
+  'no-use-only:Use only when the user' \
   'agents-extra:nested payload' \
   'self-name:names its own skill' \
   'sibling-name:names sibling skill' \
@@ -53,11 +52,12 @@ disable-model-invocation: yes/' "$file" > "$file.tmp" && mv "$file.tmp" "$file" 
     unknown-key) sed 's/^name: .*/&\
 license: MIT/' "$file" > "$file.tmp" && mv "$file.tmp" "$file" ;;
     angle-bracket) sed 's/^description: .*/& Use for <tags>./' "$file" > "$file.tmp" && mv "$file.tmp" "$file" ;;
-    missing-yaml) rm "$fixture/skills/$micro/agents/openai.yaml" ;;
-    bad-yaml) printf 'policy:\n  allow_implicit_invocation: true\n' > "$fixture/skills/$micro/agents/openai.yaml" ;;
-    stray-agents) mkdir "$fixture/skills/$skill/agents" && cp "$ROOT/skills/$micro/agents/openai.yaml" "$fixture/skills/$skill/agents/" ;;
-    agents-extra) printf 'x\n' > "$fixture/skills/$micro/agents/notes.md" ;;
-    self-name) sed "s/^description: .*/description: Use $skill now./" "$file" > "$file.tmp" && mv "$file.tmp" "$file" ;;
+    missing-yaml) rm "$fixture/skills/$skill/agents/openai.yaml" ;;
+    bad-yaml) printf 'policy:\n  allow_implicit_invocation: true\n' > "$fixture/skills/$skill/agents/openai.yaml" ;;
+    model-invoked) grep -vx 'disable-model-invocation: true' "$file" > "$file.tmp" && mv "$file.tmp" "$file" ;;
+    no-use-only) sed 's/Use only when the user/Use when the user/' "$file" > "$file.tmp" && mv "$file.tmp" "$file" ;;
+    agents-extra) printf 'x\n' > "$fixture/skills/$skill/agents/notes.md" ;;
+    self-name) sed "s/^description: .*/description: Use only when the user asks for $skill./" "$file" > "$file.tmp" && mv "$file.tmp" "$file" ;;
     sibling-name) printf '\nThen run %s.\n' "$other" >> "$file" ;;
     method-name) printf '\nRun a Premortem first.\n' >> "$file" ;;
     broken-link) printf '\n[gone](./missing.md)\n' >> "$fixture/README.md" ;;
@@ -76,4 +76,4 @@ license: MIT/' "$file" > "$file.tmp" && mv "$file.tmp" "$file" ;;
   esac
 done
 
-echo "test-lint: OK (17 mutations killed)"
+echo "test-lint: OK (18 mutations killed)"
