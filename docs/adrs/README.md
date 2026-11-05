@@ -19,7 +19,8 @@ supersedes or narrows, and this index records the new disposition.
 | [ADR-0009](./0009-debloat-keeps-counter-default-rules.md) | debloat cuts default-following rules and keeps counter-default ones | Accepted |
 | [ADR-0010](./0010-skills-measured-as-second-passes.md) | Skills are measured as on-demand second passes | Accepted |
 | [ADR-0011](./0011-panel-and-bulletproof-fix-texts.md) | Ship the panel and bulletproof second-pass fix texts | Accepted |
-| [ADR-0012](./0012-wdyt-judges-the-users-idea.md) | wdyt judges an idea the user proposes | Accepted |
+| [ADR-0012](./0012-wdyt-judges-the-users-idea.md) | wdyt judges an idea the user proposes | Superseded by ADR-0016 |
 | [ADR-0013](./0013-micro-skill-revisions-from-research.md) | Revise the micro skills from the research | Accepted |
 | [ADR-0014](./0014-every-skill-manual-only.md) | Every skill is manual-only | Accepted |
 | [ADR-0015](./0015-despaghettify.md) | Add despaghettify for dense code | Accepted |
+| [ADR-0016](./0016-wdyt-judges-any-open-proposal.md) | wdyt judges an open proposal, the user's or the agent's | Accepted |

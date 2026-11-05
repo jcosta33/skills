@@ -1,13 +1,14 @@
 ---
 name: wdyt
-description: Judge an idea the user proposes and return one reasoned verdict on it. Use only when the user puts forward their own idea, design, claim, or plan and asks what you think, even when they sound sure of it. Do not use to re-check your own earlier answer, or when one lookup, command, or test settles the question.
+description: Judge an open proposal and return one reasoned verdict on it. Use only when the user asks what you think of an undecided idea, design, claim, or plan, whether they proposed it or you did. Do not use to re-check a finished answer, or when one lookup, command, or test settles the question.
 disable-model-invocation: true
 ---
 
 # WDYT
 
-1. Restate the proposal in its strongest form and the problem it solves, without the user's
-   preference for it. Judge it as you would the same proposal from a stranger.
+1. Treat the question as open, whether the user or you proposed it. Restate the proposal in its
+   strongest form and the problem it solves, without anyone's preference for it, yours included.
+   Judge it as you would the same proposal from a stranger.
 2. List what the proposal takes for granted. Check each item a file, command, or source can decide,
    and report the result.
 3. Decide each matter of fact by opening a source or running a command; argue only what cannot be

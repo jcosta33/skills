@@ -99,7 +99,12 @@ in [`research/`](research/README.md).
 
 ## wdyt
 
-ADR-0012 maps each line to these.
+ADR-0012 maps lines 2–10 to these; ADR-0016 maps line 1 and the description.
+
+- **LLM Evaluators Recognize and Favor Their Own Generations.** Panickssery et al., 2024 preprint.
+  Models rate their own outputs above others'. https://arxiv.org/abs/2404.13076
+- **Self-Correction Bench.** Tsui, 2025 preprint. Models fix an error less often when it is their
+  own than when the same error is attributed to the user. https://arxiv.org/abs/2507.02778
 
 - **Scorekeeping in a Language Game.** Lewis, J. Philosophical Logic 1979. Presuppositions are
   accommodated unless someone objects. https://andrewmbailey.com/dkl/Scorekeeping_in_a_Language_Game.pdf

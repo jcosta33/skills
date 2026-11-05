@@ -45,7 +45,7 @@ Short skills for intents typed again and again.
 | [`sitrep`](./skills/sitrep/SKILL.md)       | status from live git, GitHub, and tests             | a status report recalled from memory                            |
 | [`stepback`](./skills/stepback/SKILL.md)   | question whether the approach should exist          | polishing work that should be skipped or redone                 |
 | [`tldr`](./skills/tldr/SKILL.md)           | decision-only short version                         | a summary that buries the decision under process                |
-| [`wdyt`](./skills/wdyt/SKILL.md)           | judge the user's own idea to one verdict            | agreeing with an idea because it is the user's                  |
+| [`wdyt`](./skills/wdyt/SKILL.md)           | judge an open proposal, the user's or yours         | agreeing with an idea because of who proposed it                |
 | [`whatsnext`](./skills/whatsnext/SKILL.md) | one recommended next step and why                   | a menu of options with no pick                                  |
 
 Every skill sets `disable-model-invocation: true` and ships `agents/openai.yaml` with
