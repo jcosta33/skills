@@ -1,0 +1,263 @@
+[
+ {
+  "id": "bulletproof-01",
+  "tag": "artifacts",
+  "kind": "seeded",
+  "tools": [],
+  "files": {
+   "src/utils/Music/MusicalScale.ts": "4392 bytes (body omitted; see source)",
+   "src/utils/Music/__tests__/MusicalScale.spec.excerpt.ts": "693 bytes (body omitted; see source)",
+   "src/modules/MIDI/models/MidiEffectTypes.ts": "1146 bytes (body omitted; see source)",
+   "src/modules/MIDI/useCases/midiEffectPlugins/createScaleFilter.ts": "444 bytes (body omitted; see source)",
+   "src/modules/MIDI/useCases/midiEffectPlugins/__tests__/createScaleFilter.spec.ts": "1121 bytes (body omitted; see source)",
+   "src/modules/MIDI/useCases/stepRecording/stepRecordNavigation.ts": "2219 bytes (body omitted; see source)",
+   "src/modules/MIDI/useCases/snapClipToScale.ts": "651 bytes (body omitted; see source)",
+   "src/modules/MIDI/useCases/midiNoteTransforms/projectMidiNoteMenuTransform.excerpt.ts": "727 bytes (body omitted; see source)",
+   "src/modules/Project/useCases/setProjectScaleName.ts": "414 bytes (body omitted; see source)",
+   "src/modules/TimelineEditor/presentations/helpers/pianoRollConstants.ts": "2163 bytes (body omitted; see source)",
+   "src/modules/TimelineEditor/presentations/hooks/usePianoRollRenderer.excerpt.ts": "807 bytes (body omitted; see source)",
+   "src/modules/TimelineEditor/presentations/hooks/usePianoRollInteractions.excerpt.ts": "609 bytes (body omitted; see source)",
+   "src/modules/TimelineEditor/presentations/views/ClipView/PianoRoll.excerpt.tsx": "2466 bytes (body omitted; see source)",
+   "src/modules/TimelineEditor/presentations/views/ClipView/ScaleGuideOverlay.tsx": "1636 bytes (body omitted; see source)",
+   "src/modules/TimelineEditor/presentations/views/ClipView/KneadEditor.excerpt.tsx": "1051 bytes (body omitted; see source)",
+   "src/modules/Yeast/workers/processors/Harmonizer.ts": "2881 bytes (body omitted; see source)",
+   "src/modules/Yeast/workers/processors/ScaleQuantizer.ts": "2921 bytes (body omitted; see source)"
+  },
+  "request": "merging #6208 in a few minutes, CI's green. I mostly need 2-3 lines for the changelog out of this. quick sanity check that nothing in the wrap-up is off while you're at it. touched files plus their neighbours are in the working dir (PianoRoll and the renderer are excerpts).\n\nthe lane's wrap-up:\n\n> Shipped #6208. What changed:\n> 1. `getScale` (MidiEffectTypes) and `getScalePattern` (MusicalScale) read through Maps built from the existing tables, so `__proto__`, `constructor`, `toString` come back undefined.\n> 2. Both quantizers (`quantizeCentsToScale`, `quantizeMidiNoteToScale`) fall back to chromatic, so snap-to-scale (clip menu, piano-roll constrain, `snapClipToScale`) and Knead retune survive a bad stored name.\n> 3. Step-record arrows fall back to chromatic and move one semitone.\n> 4. Piano roll: rail shading reads `getScalePattern`; fold and the canvas grid go through `getScaleIntervals`, which falls back to chromatic.\n> 5. The MIDI-effect Scale Filter falls back to major.\n> 6. Harmonizer and Scale Quantizer (Yeast workers) read through their own Map and fall back to major; the Harmonizer's `!` is gone.\n> 7. `setProjectScaleName` already rejects unknown names with an own-property check, so only loaded files can carry a bad name.\n> 8. Prototype-name specs added for MusicalScale, the scale filter, step record and the piano-roll constants.\n> 9. Sweep for leftover plain-object reads is clean:\n> ```\n> $ grep -rn \"SCALE_PATTERNS\\[\" src --include='*.ts' | grep -v __tests__\n> $ grep -rn \"SCALES\\[scaleName\\]\" src --include='*.ts' | grep -v __tests__\n> $\n> ```\n\nPR body:\n\nfix(music): read stored scale names through a map so prototype names fall back (#6208)\n\nScale names reach the scale tables from stored data: the project scale,\na Yeast device's scale parameter, step recording and the piano-roll\nfilter. The tables were plain objects, so a name such as `constructor`\nor `__proto__` resolved to an Object.prototype member instead of\nmissing. The `?? fallback` never fired, and the piano roll, the\nstep-record pitch arrows and scale quantizing threw on `.includes`.\nEvery read now goes through a Map-backed lookup, the same way scale\nlabels already do, and an unknown name takes each site's existing\nfallback: chromatic for the editor and quantizers, major for the Yeast\nprocessors and the scale filter. The Harmonizer's non-null assertion is\nreplaced by that fallback.",
+  "key": {
+   "hit": "Finds ScaleGuideOverlay.tsx, which PianoRoll renders with `scaleType={scaleName}`. It still reads the plain object through the `SCALES` alias that pianoRollConstants re-exports (`SCALES = SCALE_PATTERNS`): `SCALES[scaleType] ?? SCALES.chromatic!`. A stored name like `constructor` resolves to a function, the fallback never fires, and `intervals.includes` throws when the piano roll opens with guides on. Says the clean sweep missed it for two reasons: `--include='*.ts'` skips .tsx files, and the patterns only match `SCALE_PATTERNS[` and `SCALES[scaleName]`. Concludes the 'every read goes through a Map' claim is false, so the changelog should not claim it, or the overlay should be fixed first.",
+   "partial": "Notices the `SCALES` re-export or that the grep skips .tsx files, but does not find the overlay's read. Or names the overlay without explaining why it throws or why the sweep missed it.",
+   "miss": "Writes the changelog lines and accepts the wrap-up (all reads go through the Map), or raises only unrelated points.",
+   "false_flag": "Flagging constant-key reads (`SCALES.major!`, `SCALE_PATTERNS.chromatic!`, `SCALES.chromatic!`), `SCALE_NAMES[Math.round(value)]` in the Yeast setParam, or the own-property guard in setProjectScaleName as unsafe. Saying the PianoRoll rail's `getScalePattern(scaleName)?.includes(...)` throws (optional chaining makes it false). Claiming quantizeMidiNoteToScale or quantizeCentsToScale still use bracket reads (both use getScalePattern)."
+  },
+  "source": "Sourdaw commit b6b74aec2f (PR #6208). MusicalScale.ts, MidiEffectTypes.ts, createScaleFilter(+spec), stepRecordNavigation.ts, snapClipToScale.ts and setProjectScaleName.ts are verbatim from HEAD, and the other excerpts are verbatim slices. ScaleGuideOverlay.tsx and its use in PianoRoll are made up for this item, built on the real `SCALES = SCALE_PATTERNS` re-export in pianoRollConstants.ts. The grep transcript is narrowed on purpose."
+ },
+ {
+  "id": "bulletproof-02",
+  "tag": "artifacts",
+  "kind": "seeded",
+  "tools": [],
+  "files": {
+   "src/modules/SampleLibrary/useCases/ensureFactorySampleBuffer.ts": "4852 bytes (body omitted; see source)",
+   "src/modules/SampleLibrary/useCases/seedFactoryLibrary.ts": "3902 bytes (body omitted; see source)",
+   "src/modules/SampleLibrary/useCases/factoryLibrary/renderFactoryLibraryPack.ts": "2509 bytes (body omitted; see source)",
+   "src/modules/SampleLibrary/useCases/factoryLibrary/rescanFactoryLibrary.ts": "452 bytes (body omitted; see source)",
+   "src/modules/SampleLibrary/useCases/factoryLibrary/cacheFactoryBuffers.ts": "2238 bytes (body omitted; see source)",
+   "src/modules/SampleLibrary/useCases/factoryLibrary/findFactoryRoot.ts": "354 bytes (body omitted; see source)",
+   "src/modules/SampleLibrary/useCases/factoryLibrary/toFactorySampleRecord.ts": "1896 bytes (body omitted; see source)",
+   "src/modules/SampleLibrary/useCases/connectFolder/rescanRoot.ts": "2110 bytes (body omitted; see source)",
+   "src/modules/SampleLibrary/useCases/index.ts": "912 bytes (body omitted; see source)",
+   "src/modules/SampleLibrary/AGENTS.excerpt.md": "1479 bytes (body omitted; see source)",
+   "src/modules/SampleLibrary/presentations/views/LibraryBrowser.excerpt.tsx": "1542 bytes (body omitted; see source)",
+   "src/modules/Arrangement/presentations/hooks/useTimelineFileDrop.excerpt.ts": "2593 bytes (body omitted; see source)",
+   "src/modules/AudioEngine/useCases/holdAudioBufferForSession.ts": "611 bytes (body omitted; see source)",
+   "src/modules/AudioEngine/useCases/restoreUnpinnedAudioBuffersFromIdb.ts": "1413 bytes (body omitted; see source)",
+   "src/modules/FactorySynthesis/transformers/generateImpactsPack.excerpt.ts": "1168 bytes (body omitted; see source)",
+   "src/modules/Crumbs/useCases/handleFileDrop.ts": "1972 bytes (body omitted; see source)",
+   "src/modules/Crumbs/useCases/loadLibrarySampleIntoCrumbs.ts": "1859 bytes (body omitted; see source)"
+  },
+  "request": "#6212 is in the merge queue. the user who reported \"factory samples go silent after relaunch\" wants a reply; I mostly need a short plain-language explanation of what was wrong and what changed. sanity check the lane's summary first so I don't promise something that isn't true. files are in the working dir.\n\nlane summary:\n\n> 1. On later launches `seedFactoryLibrary` marks the restored factory root ready instead of leaving it offline; first launch still renders, caches and persists once.\n> 2. A disconnected factory root stays gone: the seed flag means \"seeded once\", so a set flag with no root is never recreated.\n> 3. `ensureFactorySampleBuffer` resolves in order: resident cache entry, PCM stored this or an earlier launch (`restoreUnpinnedAudioBuffersFromIdb`, which pins nothing), then one render of the pack.\n> 4. Concurrent callers share one render (`renderFactoryLibraryPack` memoises the in-flight promise).\n> 5. A render is cached (and so stored) only when storage holds nothing for that sample; when storage can't be read the sample plays this session via `holdAudioBufferForSession` and is never written.\n> 6. Rescan re-renders and caches only samples with no stored audio.\n> 7. Glitch Stutter uses a seeded LCG, so the pack renders identically every time.\n> 8. Every reader of a factory sample's buffer now goes through `ensureFactorySampleBuffer` — Library preview and timeline drop were the two; the other cache reads are clip-buffer reads in the renderers, not library reads:\n> ```\n> $ grep -rn \"getCachedAudioBuffer\" src/modules/SampleLibrary src/modules/Arrangement/presentations | grep -v __tests__\n> src/modules/SampleLibrary/presentations/views/LibraryBrowser.tsx:20:import { getCachedAudioBuffer } from '#/modules/AudioEngine/useCases';\n> src/modules/SampleLibrary/presentations/views/LibraryBrowser.tsx:240:        const cachedBuffer = getCachedAudioBuffer({ bufferId: sample.id });\n> src/modules/SampleLibrary/useCases/ensureFactorySampleBuffer.ts:5:    getCachedAudioBuffer,\n> src/modules/SampleLibrary/useCases/ensureFactorySampleBuffer.ts:41:        const buffer = getCachedAudioBuffer({ bufferId: sampleId });\n> src/modules/SampleLibrary/useCases/ensureFactorySampleBuffer.ts:84:    const cached = getCachedAudioBuffer({ bufferId: sampleId });\n> src/modules/SampleLibrary/useCases/ensureFactorySampleBuffer.ts:107:    const resident = getCachedAudioBuffer({ bufferId: sampleId });\n> src/modules/SampleLibrary/useCases/factoryLibrary/cacheFactoryBuffers.ts:3:    getCachedAudioBuffer,\n> src/modules/SampleLibrary/useCases/factoryLibrary/cacheFactoryBuffers.ts:37:            if (absent.has(sample.id) && !getCachedAudioBuffer({ bufferId: sample.id })) {\n> src/modules/Arrangement/presentations/renderers/createWebGpuRenderer.ts:1:import { getCachedAudioBuffer, getCachedAudioBufferWaveformPeaks } from '#/modules/AudioEngine/useCases';\n> src/modules/Arrangement/presentations/renderers/createWebGpuRenderer.ts:538:                            const buffer = getCachedAudioBuffer({ bufferId: clip.audioBufferId });\n> src/modules/Arrangement/presentations/renderers/createWebGpuRenderer.ts:552:                                    const peaks = getCachedAudioBufferWaveformPeaks({\n> src/modules/Arrangement/presentations/hooks/useTimelineFileDrop.ts:3:import { decodeAudioFile, discardDecodedAudioFile, getCachedAudioBuffer } from '#/modules/AudioEngine/useCases';\n> src/modules/Arrangement/presentations/hooks/useTimelineFileDrop.ts:222:                const renderBuffer = getCachedAudioBuffer({ bufferId: render.bufferId });\n> src/modules/Arrangement/presentations/hooks/useTimelineFileDrop.ts:300:                let cachedBuffer = getCachedAudioBuffer({ bufferId: candidateBufferId });\n> src/modules/Arrangement/presentations/renderers/clipDrawing.ts:7:import { getCachedAudioBuffer, getCachedAudioBufferWaveformPeaks } from '#/modules/AudioEngine/useCases';\n> src/modules/Arrangement/presentations/renderers/clipDrawing.ts:191:        clip.type === 'audio' && clip.audioBufferId ? getCachedAudioBuffer({ bufferId: clip.audioBufferId }) : null;\n> src/modules/Arrangement/presentations/renderers/clipDrawing.ts:470:        const peaks = getCachedAudioBufferWaveformPeaks({\n> ```\n\nPR body:\n\nfix(library): obtain factory sample buffers on demand instead of at launch (#6212)\n\nFactory samples stopped playing after a relaunch: the factory root is\nsynthesised, so restoring the library brought it back offline with no\nbuffers, and preview said the audio buffer was not available. The\nfactory root now comes back ready, and every reader of a factory\nsample's buffer (preview, timeline drop) obtains it on demand: the\nresident cache entry, then PCM stored this session, then one render of\nthe pack shared by concurrent callers. Rescan re-renders the pack. The\nGlitch Stutter generator now uses a seeded random source, so the pack\nrenders identically each time and saved clips keep matching audio.",
+  "key": {
+   "hit": "Finds src/modules/Crumbs/useCases/loadLibrarySampleIntoCrumbs.ts. It reads a Library-tab sample's buffer straight from the cache (`getCachedAudioBuffer({ bufferId: payload.audioBufferId ?? payload.id })`) and reports 'audio buffer is not available' when it is missing. It never calls ensureFactorySampleBuffer, so after a relaunch a factory sample dropped on Crumbs still fails. Says claim 8 ('every reader goes through ensureFactorySampleBuffer') is false because the sweep only searched SampleLibrary and Arrangement/presentations. Concludes the reply must not promise factory samples work everywhere, or Crumbs should be fixed first.",
+   "partial": "Points out that the sweep was limited to two directories so claim 8 is unproven, without finding the Crumbs reader. Or names the Crumbs file without explaining why it fails after relaunch.",
+   "miss": "Writes the user reply on top of the summary as given, or accepts claim 8.",
+   "false_flag": "Calling the renderer reads (createWebGpuRenderer, clipDrawing) or the AI-render read at useTimelineFileDrop.ts:222 factory-sample gaps (they read clip or render buffer ids). Saying LibraryBrowser or the timeline drop skips ensureFactorySampleBuffer (both call it on a cache miss). Disputing claims 1-7, which the included files support."
+  },
+  "source": "Sourdaw commit 61130f7f94 (PR #6212). The SampleLibrary use cases, AudioEngine helpers, Crumbs handleFileDrop.ts and the AGENTS.md bullet are verbatim from HEAD; the LibraryBrowser, timeline-drop and Glitch Stutter excerpts are verbatim slices. The grep output is a real run over those two directories. loadLibrarySampleIntoCrumbs.ts is made up for this item, using the web path that handleFileDrop's warning points to."
+ },
+ {
+  "id": "bulletproof-03",
+  "tag": "artifacts",
+  "kind": "seeded",
+  "tools": [],
+  "files": {
+   "src/modules/Project/useCases/demoProjects/nebulaDrift/createNebulaDriftDemo.ts": "8409 bytes (body omitted; see source)",
+   "src/modules/Project/useCases/demoProjects/demoUtils/seedMidiNotes.ts": "654 bytes (body omitted; see source)",
+   "src/modules/Project/useCases/demoProjects/demoUtils/syncArrangement.ts": "1103 bytes (body omitted; see source)",
+   "src/modules/Project/useCases/demoProjects/demoUtils/applyPreset.ts": "1055 bytes (body omitted; see source)",
+   "src/modules/Project/useCases/demoProjects/demoUtils/note.ts": "393 bytes (body omitted; see source)",
+   "src/modules/Project/useCases/projectTemplates/templateHelpers/addMarkers.ts": "848 bytes (body omitted; see source)",
+   "src/modules/Project/useCases/projectTemplates/templateHelpers/addSections.ts": "928 bytes (body omitted; see source)",
+   "src/modules/Project/useCases/projectTemplates/templateHelpers/initProject.ts": "2201 bytes (body omitted; see source)",
+   "src/modules/Project/useCases/projectTemplates/templateHelpers/setChordProgression.ts": "1261 bytes (body omitted; see source)",
+   "src/modules/Project/useCases/projectTemplates/templateHelpers/setGroove.ts": "1533 bytes (body omitted; see source)",
+   "src/modules/Project/useCases/projectTemplates/templateHelpers/createBus.ts": "669 bytes (body omitted; see source)",
+   "src/modules/Project/useCases/projectTemplates/templateHelpers/createAudioTrack.ts": "850 bytes (body omitted; see source)",
+   "src/modules/Project/useCases/projectTemplates/templateHelpers/createInstrumentTrack.ts": "1169 bytes (body omitted; see source)",
+   "src/modules/Project/useCases/projectTemplates/templateHelpers/addSend.ts": "497 bytes (body omitted; see source)",
+   "src/modules/Project/useCases/projectTemplates/templateHelpers/buildDevice.ts": "841 bytes (body omitted; see source)",
+   "src/modules/Project/useCases/projectTemplates/templateHelpers/finalizeTemplate.ts": "2291 bytes (body omitted; see source)",
+   "src/modules/Project/useCases/projectPersistence/projectLifecycleRegistry.ts": "3915 bytes (body omitted; see source)",
+   "src/modules/Project/useCases/projectPersistence/helpers/resetModuleStoresToDefault.ts": "983 bytes (body omitted; see source)",
+   "eslint.config.excerpt.mjs": "2010 bytes (body omitted; see source)"
+  },
+  "request": "#6130 merges after lunch. I'm updating docs/architecture with how a project switch resets modules now; I mostly want a tight paragraph on that from the summary below. sanity check it on the way, the template/demo files and the rule are in the working dir (Nebula demo is 2k lines, cut down).\n\nlane summary:\n\n> 1. `projectLifecycleRegistry` is configured once at boot from `#/app/registerProjectLifecycle`; re-registering the identical list is a no-op, a duplicate or a differing list throws, and reading before registration throws instead of returning an empty list.\n> 2. `resetModuleStoresToDefault` walks the registered participants in order and passes each the reset options; load passes `false` for state its own hydrate replaces.\n> 3. Templates write markers and sections through `restoreMarkerSnapshot`, chords through `replaceChordTrackState`, grooves through `createGrooveTemplate`/`assignGrooveTemplate`, and transport through `seedTransportForNewProject`, which keeps the user's count-in and pre-roll.\n> 4. `initProject` resets the arrangement through `resetArrangementStoresForProject` before it builds the master track.\n> 5. The Nebula demo writes automation (`restoreAutomationSnapshot`), markers, time signatures (`replaceTimeSignatureMap` / `addTimeSignatureChange`) and the tempo map (`restoreTimelineMapSnapshot`) through their owners.\n> 6. Project still writes its own stores (`projectStore`, `arrangementStore`); reads of other modules' stores (`markerStore.value`, `timeSignatureMapStore.value`) are fine and stay.\n> 7. No production file writes a foreign store anymore, so `sourdaw/no-foreign-store-write` is `error` with an empty baseline:\n> ```\n> $ grep -rnE \"(Store|store)\\.set\\(\" src/modules/Project --include='*.ts' | grep -v __tests__ | grep -vE \"projectStore|arrangementStore\"\n> $ pnpm lint\n> ✓ 0 problems (0 errors, 0 warnings)\n> ```\n\nPR body:\n\nrefactor(project): reset and hydrate modules through a lifecycle registry, not their stores (#6130)\n\n### What does this PR do?\nProject no longer writes other modules' stores. A project lifecycle\nregistry, owned by Project and composed once at bootstrap in src/app,\nlists every module that takes part in a project reset or a project load\nhydrate, in the order both phases run today; each module resets or\nhydrates its own stores through its own use case. The three\ncomposition-root seams for agent cancellation and artifact clearing\nbecome registry participants, templates and the Nebula demo write\nmarkers, transport, tracks and automation through their owners' use\ncases, and Project drops its direct edges to eight device modules from\nthe module tier baseline; its Levain edge stays recorded because the\nstring orchestra template still builds Levain device state. With no\nproduction file left writing a foreign store, the foreign-store-write\nlint rule becomes an error. Behaviour is unchanged: a spec written\nagainst the old code pins the exact reset and hydrate order.",
+  "key": {
+   "hit": "Finds demoUtils/seedMidiNotes.ts, which the Nebula demo now calls. It writes the MIDI module's store: `landNotes(midiStore, ...)` calls `target.update(...)` on the `midiStore` imported from '#/modules/MIDI/stores'. So claim 7 is false. Explains that the grep matched only `.set(` and that the lint rule missed it because the write goes through a function parameter, not the imported binding or a const alias (the rule resolves only those). Says the paragraph should not claim Project writes no foreign store, or the demo should go back to `setMidiStoreState`.",
+   "partial": "Finds seedMidiNotes writing midiStore but does not explain why lint and the grep passed. Or says only that the grep is too narrow (`.set(` only) without finding the write.",
+   "miss": "Writes the architecture paragraph and accepts claim 7, or relies on the green lint.",
+   "false_flag": "Flagging reads as writes (`markerStore.value`, `automationStore.value`, `midiStore.value` in syncArrangement, `timeSignatureMapStore.value`). Flagging `projectStore.set` or `arrangementStore.set` (Project's own stores). Calling the restoreMarkerSnapshot/replaceTimeSignatureMap/restoreAutomationSnapshot calls direct writes, or `applyPreset` mutating a local track object a store write."
+  },
+  "source": "Sourdaw commit 85b14f55fa (PR #6130; body verbatim). The template helpers, demoUtils (syncArrangement, applyPreset, note), projectLifecycleRegistry.ts and resetModuleStoresToDefault.ts are verbatim from HEAD. The Nebula demo is verbatim except that its `setMidiStoreState(...)` call becomes `seedMidiNotes(...)`. demoUtils/seedMidiNotes.ts is made up for this item; it relies on the real rule's blind spot (CallExpression only on imported or const-aliased bindings, eslint.config.mjs:1835)."
+ },
+ {
+  "id": "bulletproof-04",
+  "tag": "artifacts",
+  "kind": "seeded",
+  "tools": [],
+  "files": {
+   "src/modules/MIDI/useCases/stepRecording/stepRecordNavigation.ts": "2219 bytes (body omitted; see source)",
+   "src/modules/MIDI/useCases/stepRecording/stepRecordStepUp.ts": "729 bytes (body omitted; see source)",
+   "src/modules/MIDI/useCases/stepRecording/stepRecordStepDown.ts": "661 bytes (body omitted; see source)",
+   "src/modules/MIDI/useCases/stepRecording/stepRecordAdvance.ts": "319 bytes (body omitted; see source)",
+   "src/modules/MIDI/useCases/stepRecording/stepRecordRetreat.ts": "332 bytes (body omitted; see source)",
+   "src/modules/MIDI/useCases/stepRecording/setStepRecordBeat.ts": "438 bytes (body omitted; see source)",
+   "src/modules/MIDI/useCases/stepRecording/toggleStepRecordingForClip.ts": "477 bytes (body omitted; see source)",
+   "src/modules/MIDI/useCases/stepRecording/toggleStepRecording.ts": "742 bytes (body omitted; see source)",
+   "src/modules/MIDI/useCases/stepRecording/stepRecordNoteOff.ts": "695 bytes (body omitted; see source)",
+   "src/modules/MIDI/useCases/stepRecording/hasActiveStepRecordingDependency.ts": "290 bytes (body omitted; see source)",
+   "src/modules/MIDI/useCases/stepRecording/__tests__/stepRecordNavigationBranches.spec.ts": "6440 bytes (body omitted; see source)",
+   "src/modules/MIDI/useCases/stepRecording/__tests__/stepRecordStepUp.spec.ts": "2966 bytes (body omitted; see source)",
+   "src/modules/MIDI/useCases/stepRecording/__tests__/stepRecordStepDown.spec.ts": "2970 bytes (body omitted; see source)",
+   "src/modules/MIDI/useCases/stepRecording/__tests__/stepRecordNavigationTestHelpers.ts": "1057 bytes (body omitted; see source)",
+   "src/modules/MIDI/useCases/stepRecording/__tests__/stepRecordAdvance.spec.ts": "986 bytes (body omitted; see source)",
+   "src/modules/MIDI/useCases/stepRecording/__tests__/stepRecordRetreat.spec.ts": "1253 bytes (body omitted; see source)",
+   "src/modules/MIDI/useCases/stepRecording/__tests__/setStepRecordBeat.spec.ts": "1320 bytes (body omitted; see source)",
+   "src/modules/MIDI/useCases/stepRecording/__tests__/toggleStepRecordingForClip.spec.ts": "1714 bytes (body omitted; see source)",
+   "src/modules/MIDI/useCases/stepRecording/__tests__/hasActiveStepRecordingDependency.spec.ts": "1122 bytes (body omitted; see source)"
+  },
+  "request": "step-record cleanup PR. going to delete the getNextStepRecordPitch-related cases from the stepUp/stepDown specs per your note, then open it. I mostly need the PR description: a short list of what covers step recording after this. sanity check your note first. everything under stepRecording/ is in the working dir.\n\nyour note from earlier:\n\n> Step-recording coverage, after the branch spec:\n> 1. `stepRecordAdvance` / `stepRecordRetreat`: inactive no-op, moves by `stepSize`, and Retreat clamps at beat 0.\n> 2. `setStepRecordBeat`: number and updater forms, and no state is created from an empty store.\n> 3. `toggleStepRecordingForClip`: activates for the clip and resets the beat; deactivating clears the clip.\n> 4. `stepRecordNoteOn`: registers the same undo unit as mouse step entry, undo/redo keep the note identity, inactive or clip-less produces nothing.\n> 5. `hasActiveStepRecordingDependency`: only an active target is reported.\n> 6. `stepRecordStepUp` / `stepRecordStepDown`: inactive no-op and the 127 / 0 clamps live only here.\n> 7. `stepRecordNavigationBranches.spec.ts` covers every reachable branch of `getNextStepRecordPitch` by itself: chromatic fallback, unknown and prototype names, in-scale steps with the octave wrap both ways, off-scale tones both ways, non-zero root, pentatonic. The `!chromaticPattern` and `nextPitchClass === undefined` guards are unreachable.\n> 8. So the scale-navigation cases in the stepUp/stepDown specs duplicate the branch spec and can go; keep only the inactive and clamp cases there.",
+  "key": {
+   "hit": "Finds that claim 7 is false and that claim 8 would delete the only coverage of that path. When an off-scale pitch class sits above every scale tone, `findIndex(param > currentPc)` returns -1 and the code falls back to `degree = 0` (up) or `degree = pattern.length - 1` (down). The branch spec never takes that path: its off-scale cases are C# and G# in major. Only stepRecordStepUp.spec ('should preserve the first-degree fallback for off-scale pitches past the last scale degree', pentatonicMajor 70 -> 62) and stepRecordStepDown.spec ('should step below off-scale pitches past the last scale degree', 70 -> 67) cover it. Says to keep those cases, or move them into the branch spec, before the PR goes out. Bonus, not required: up from 70 lands on 62, a downward move pinned as intended.",
+   "partial": "Says the branch spec misses the findIndex === -1 fallback but does not tie it to the stepUp/stepDown cases about to be deleted. Or names only one direction.",
+   "miss": "Writes the PR description on top of claims 7-8, or confirms the branch spec covers every reachable branch.",
+   "false_flag": "Calling the `!chromaticPattern` or `nextPitchClass === undefined` guards reachable gaps. Disputing claims 1-6 (the included specs back them). Noting that branch-spec test names contradict their expectations ('snaps to ... D(62)' expects 64) is correct extra, not a false flag."
+  },
+  "source": "Sourdaw HEAD, src/modules/MIDI/useCases/stepRecording/ and its __tests__/, all verbatim. The gap is real and was not planted: stepRecordNavigationBranches.spec.ts never takes the findIndex === -1 fallback, which only the stepUp/stepDown specs cover. The note's claims 1-6 were checked against the spec case names."
+ },
+ {
+  "id": "bulletproof-05",
+  "tag": "source",
+  "kind": "seeded",
+  "tools": [],
+  "files": {
+   "notes/automerge-text.md": "836 bytes (body omitted; see source)",
+   "package.json": "576 bytes (body omitted; see source)",
+   "pnpm-lock.yaml": "1644 bytes (body omitted; see source)",
+   "scripts/collabRelaySmoke.ts": "947 bytes (body omitted; see source)",
+   "src/infra/automerge/automergeStreamingEntry.excerpt.ts": "603 bytes (body omitted; see source)",
+   "src/modules/Project/handlers/project/handleRepairProjectData.ts": "2804 bytes (body omitted; see source)",
+   "src/modules/Arrangement/handlers/track/renameTrack.ts": "2328 bytes (body omitted; see source)"
+  },
+  "request": "the agent on the track-rename interleaving bug (two peers rename the same track at once, you get \"BSaussb Lead\") wants to land this tonight. I mostly need a one-line changelog entry from it. quick sanity check on the reasoning while you're there, relevant bits in the working dir.\n\nits write-up:\n\n> 1. Repro: two tabs in one session, both rename track 1 within a second; the merged name interleaves characters.\n> 2. `handleRenameTrack` only guards against a stale *local* name (`expectedName` vs the local store), so it can't see a concurrent rename from a peer; the CRDT merge decides.\n> 3. Root cause: the name is assigned as a plain string, and plain strings in an Automerge doc are collaborative text, merged per character.\n> 4. Fix: wrap it in `RawString`, Automerge's atomic string. Per the docs (notes/automerge-text.md): \"A `RawString` behaves like any other scalar: concurrent assignments conflict and one value wins.\"\n> 5. Those docs are for the version we run: the lockfile pins `@automerge/automerge@2.1.13`.\n> 6. A conflicting rename then surfaces through the existing conflict-repair flow like any other scalar field (`handleRepairProjectData` re-asserts the resolved value).\n> 7. Undo of a rename still carries `expectedName`, so undoing after a peer's rename reports a conflict instead of overwriting it.\n>\n> ```diff\n> +import { RawString } from '@automerge/automerge';\n>  ...\n> -        track.name = name;\n> +        track.name = new RawString(name);\n> ```\n> readers switch to `String(track.name)`.",
+  "key": {
+   "hit": "Says claim 5 is wrong. The lockfile's `@automerge/automerge@2.1.13` is the nested copy pulled in by the dev-only `@automerge/automerge-repo` 1.2.1 (used by scripts/collabRelaySmoke.ts). The app's own `@automerge/automerge` import resolves through the root importer to 3.5.0 (^3.5.0 in package.json). So the 2.1.13 README cannot establish that `RawString` exists or behaves that way for the code being changed. Points to in-repo evidence that 3.x differs: handleRepairProjectData imports and checks `ImmutableString`, not RawString. Names what would settle it: the 3.5.0 docs, changelog or type declarations, or a two-peer concurrent-rename merge test against 3.5.0. Does not endorse landing on the 2.1 citation.",
+   "partial": "Flags a version doubt (for example 'the docs may not match 3.5') but misses that the 2.1.13 entry is a nested copy, or does not say what would settle it. Or spots the nested copy but still endorses the change.",
+   "miss": "Writes the changelog line and accepts the docs citation and claim 5.",
+   "false_flag": "Disputing claims 2, 6 or 7, which renameTrack.ts and handleRepairProjectData.ts support (though noting that the repair path's `instanceof ImmutableString` would not recognise a RawString is a good catch, not a false flag). Rejecting the symptom in claim 1. Stating from memory exactly what 3.x does, with no version-matched source, as settled fact."
+  },
+  "source": "Sourdaw handleRepairProjectData.ts (lines 1-75, real ImmutableString import and conflict re-assert), renameTrack.ts and automergeStreamingEntry.ts are verbatim. package.json and the lockfile carry the real ^3.5.0 -> 3.5.0 entry; the automerge-repo devDependency, its nested 2.1.13 copy and scripts/collabRelaySmoke.ts are made up for this item. The docs excerpt is written for this item and labelled 2.1.13 by its URL."
+ },
+ {
+  "id": "bulletproof-06",
+  "tag": "source",
+  "kind": "seeded",
+  "tools": [],
+  "files": {
+   "notes/tfjs-setBackend.md": "629 bytes (body omitted; see source)",
+   "package.json": "376 bytes (body omitted; see source)",
+   "pnpm-lock.yaml": "4396 bytes (body omitted; see source)",
+   "src/modules/AudioAnalysis/useCases/polyphonicAudioToMidi.ts": "7511 bytes (body omitted; see source)",
+   "src/modules/BrowserAi/workers/tfjsInferenceWorker.excerpt.ts": "1114 bytes (body omitted; see source)"
+  },
+  "request": "polyphonic audio-to-MIDI takes ~40 s on a 3-min stem. the agent wants to do the change below. I'm going to let it. mostly want a rough sense of what to expect from it; give it a quick sanity check first. files in the working dir.\n\nits plan:\n\n> 1. Basic Pitch's model is bundled through the `?url` import, loaded once (concurrent callers share one `BasicPitch`), and fed audio resampled to 22 050 Hz. None of that changes.\n> 2. We already ship `@tensorflow/tfjs-backend-webgpu` 4.22.0; the DDSP worker registers it, calls `setBackend('webgpu')` and checks `getBackend()` afterwards, so that registration pattern works on our tfjs-core.\n> 3. tfjs's backend is global. The API docs for `tf.setBackend` say \"Subsequent operations, including model execution via tf.loadGraphModel / GraphModel.executeAsync, run on the new backend\" (notes/tfjs-setBackend.md).\n> 4. Basic Pitch runs on that same tfjs-core: package.json pins `@tensorflow/tfjs-core` 4.22.0 and the lockfile resolves it once for the app.\n> 5. So: register and select `webgpu` on `@tensorflow/tfjs-core` in `getBasicPitchModel()` right before `new BasicPitch(...)`, same code as the worker, ~15 lines, no new dependency. Inference moves to the GPU.",
+  "key": {
+   "hit": "Says claim 4 is false and with it the conclusion. In the lockfile snapshots, `@spotify/basic-pitch@1.0.1` depends on `@tensorflow/tfjs` 3.21.0, whose snapshot pulls its own `@tensorflow/tfjs-core` 3.21.0 with only the cpu and webgl backends. So Basic Pitch runs on a separate tfjs engine instance. The 4.22.0 docs quote and the worker pattern describe the app's 4.22 core, and setting the backend there does not reach Basic Pitch's model. Names what would establish it: check which tfjs-core instance BasicPitch executes on (its own tfjs getBackend()), basic-pitch 1.0.1's source, or a measurement with the change applied. Says not to expect a speedup from this change as planned.",
+   "partial": "Notices basic-pitch pulls its own or older tfjs but does not connect it to why the global-backend quote fails. Or says the claim is unverified without finding the nested 3.21 stack.",
+   "miss": "Gives a speedup estimate and endorses the plan, or only reviews the registration code.",
+   "false_flag": "Disputing claims 1-3: the use case file backs 1, the worker excerpt backs 2, and the quote is fine for a single 4.22 instance. Arguing WebGPU is unavailable in Electron or Chromium in general. Giving 'it runs on the main thread, not in a worker' as the main objection."
+  },
+  "source": "Sourdaw pnpm-lock.yaml snapshots verbatim (the '@sp'..'@tz' range, including basic-pitch 1.0.1 -> @tensorflow/tfjs 3.21.0 -> tfjs-core 3.21.0 next to tfjs-core 4.22.0). polyphonicAudioToMidi.ts is verbatim and the tfjsInferenceWorker.ts slice is verbatim (its #4466 comment is cut). pnpm-workspace.yaml documents the two-stack decision (#4466), and that comment is withheld. The docs quote is written for this item and labelled 4.22.0."
+ },
+ {
+  "id": "bulletproof-07",
+  "tag": "source",
+  "kind": "seeded",
+  "tools": [],
+  "files": {
+   "src/modules/Command/useCases/__tests__/undoRedoReplayConflicts.spec.ts": "14632 bytes (body omitted; see source)",
+   "src/modules/Command/useCases/undo.excerpt.ts": "3621 bytes (body omitted; see source)",
+   "notes/pr-6201.txt": "1132 bytes (body omitted; see source)"
+  },
+  "request": "drafting the release notes. these are your bullets for the undo/redo work from earlier in the session; I just need them tightened into user language. they're all backed, right? spec excerpt, undo.ts and the PR summary are in the working dir.\n\n> - Undo no longer stops at a step a collaborator or the assistant changed: it reports that step and undoes the one beneath it (#2881).\n> - The step that couldn't be undone stays at the top of history, so you can retry it.\n> - One press undoes at most one step.\n> - Steps that can't detect a conflict (callbacks, handlers without `canReportConflict`) are never stepped onto.\n> - Empty history entries between the blocked step and the next real one are passed over and removed, even when that next step then refuses too (#6201).\n> - A group with one real member is not treated as empty.\n> - Redo does the same: a redo a collaborator invalidated is reported and the entry behind it is redone (#2878).\n> - Redo also passes over empty entries the same way — covered by \"steps over inert units beneath a conflicted head onto the conflict-capable unit below them\" and \"steps over a run of inert units, a grouped one included, beneath a conflicted head\" in the \"undo/redo replay conflict handling (audit CC-6)\" suite.",
+  "key": {
+   "hit": "Flags the last bullet as unbacked. The two cited tests sit inside `describe('undo')`, set up `past` and call `undo()` only. The suite title 'undo/redo replay conflict handling' does not make them redo tests. The `describe('redo')` step-over tests (#2878) have no inert entries between the conflicted head and the target, and #6201 changed only undo.ts (diffstat). Names what would establish it: redo.ts's step-over code, or a redo case with inert future entries between a conflicted head and a conflict-capable entry. Says to drop or reword the bullet until then. Tightens the other bullets without objection.",
+   "partial": "Doubts the redo-inert bullet but does not point at the test bodies or the diffstat, or does not say what would establish it. Or flags it and also wrongly rejects the true #2878 redo step-over bullet.",
+   "miss": "Tightens all eight bullets as given, including redo passing over empty entries.",
+   "false_flag": "Rejecting the #2878 redo step-over bullet (the redo tests back it), or any of the first six bullets (the undo tests and undo.ts back them). Asserting that redo definitely does NOT pass over inert entries (unknown from the material)."
+  },
+  "source": "Sourdaw commit a900eb5291 (PR #6201: undo.ts only, plus 185 spec lines). The undoRedoReplayConflicts.spec.ts excerpt and the undo.ts slices (lines 120-146, 296-352) are verbatim. The bullets paraphrase the #2881, #2878 and #6201 PR texts and add the redo-inert claim for this item."
+ },
+ {
+  "id": "bulletproof-08",
+  "tag": "source",
+  "kind": "seeded",
+  "tools": [],
+  "files": {
+   "patches/vite@8.3.5.patch": "4810 bytes (body omitted; see source)",
+   "pnpm-workspace.yaml": "401 bytes (body omitted; see source)",
+   "pnpm-lock.yaml": "1238 bytes (body omitted; see source)",
+   "notes/vite-changelog.md": "1198 bytes (body omitted; see source)",
+   "notes/npm-view.txt": "254 bytes (body omitted; see source)"
+  },
+  "request": "deps lane for the vite 8.4.0 bump is ready to go. I mostly want the PR title + body drafted from the plan; sanity check it first. patch, workspace config, lockfile bits and what the lane pulled are in the working dir.\n\nlane plan:\n\n> 1. 8.4.0 is out and tagged latest (published 2026-10-30, `npm view` in notes/npm-view.txt).\n> 2. Peers are fine: `@vitejs/plugin-react` 6.1.1 and `@rolldown/plugin-babel` 0.2.4 both declare `vite: ^8.0.0`.\n> 3. Our patch only touches three dist files: `dist/client/client.mjs`, `dist/client/bundledDevClient.mjs` and `dist/node/chunks/node.js`.\n> 4. Upstream shipped the same gate in 8.4.0: its CHANGELOG lists `fix(client): skip restart polling when server.hmr is false (#21877)` (notes/vite-changelog.md).\n> 5. So: bump `vite` to ^8.4.0, delete `patches/vite@8.3.5.patch` and the `patchedDependencies` entry, regenerate the lockfile.\n> 6. Keep `e2eHmrDisconnectBoundary.spec.ts` as the browser control, as the workspace comment asks.",
+  "key": {
+   "hit": "Flags claim 4. The changelog came from `github.com/vitejs-next/vite`, a look-alike repository, while npm-view.txt shows the published package's repository is `github.com/vitejs/vite`. A changelog from another repo cannot show what the published 8.4.0 contains. Names what would establish it: vitejs/vite's own CHANGELOG or release for 8.4.0, or the published 8.4.0 tarball's dist/client/client.mjs and the `__HMR_ENABLED__` replacement in dist/node. Also running e2eHmrDisconnectBoundary.spec.ts without the patch, as pnpm-workspace.yaml requires. Says to keep the patch (drop step 5's deletion) until then. Drafts the rest without objection.",
+   "partial": "Questions whether upstream really has the fix, or asks to check the 8.4.0 dist, without noticing the changelog's repo is not vitejs/vite. Or notices the repo mismatch but gives no way to establish the claim.",
+   "miss": "Drafts the PR (deleting the patch) on the strength of the changelog entry.",
+   "false_flag": "Disputing claims 1-3 or 6, which npm-view.txt, the lockfile excerpt, the patch and the workspace comment back. Asserting from memory that upstream Vite has or lacks the fix. Making the bump itself the main objection."
+  },
+  "source": "Sourdaw patches/vite@8.3.5.patch, the pnpm-workspace.yaml patch comment and the lockfile peer ranges of @rolldown/plugin-babel 0.2.4 and @vitejs/plugin-react 6.1.1 are verbatim. The npm view transcript and the look-alike `vitejs-next/vite` changelog are written for this item."
+ },
+ {
+  "id": "bulletproof-09",
+  "tag": "control",
+  "kind": "control",
+  "tools": [],
+  "files": {
+   "src/utils/noteNames.ts": "591 bytes (body omitted; see source)",
+   "src/utils/__tests__/noteNames.spec.ts": "1115 bytes (body omitted; see source)",
+   "src/modules/WorkspaceShell/presentations/views/VirtualKeyboard.excerpt.tsx": "9369 bytes (body omitted; see source)",
+   "src/modules/WorkspaceShell/presentations/views/__tests__/VirtualKeyboard.spec.excerpt.tsx": "640 bytes (body omitted; see source)"
+  },
+  "request": "#6210, before I merge. the claim I care about: every white AND black key now reads pitch + octave, and the octave matches the visible C labels (middle C = C4). double-check that. body below, files in the working dir.\n\nfix(a11y): name every virtual keyboard key with its pitch and octave (#6210)\n\nThe on-screen piano announced only C keys by pitch (\"C4 (MIDI 60)\");\nevery other key was a bare \"MIDI 62\", so a screen-reader user could not\ntell which note a key plays. Every white and black key now announces its\npitch name and octave the way C keys already did, through a small shared\nformatter beside NOTE_NAMES that uses the existing middle-C-is-C4\nconvention.",
+  "key": {
+   "hit": "Confirms the claim holds, citing evidence. Both aria-label sites (the white-key map and the ALL_BLACK_KEYS map) call keyAriaLabel(midiNote). formatMidiNoteName computes `Math.floor(midiNote / 12) - 1`, the same formula as the visible `C{displayOctave}` label, so 60 is C4. Every rendered key falls in 0..108 (9 octaves plus a trailing C; black keys are range-checked in buildBlackKeys), so none takes the 'MIDI n' fallback. Clears the merge without blocking objections.",
+   "partial": "Confirms the claim but with no evidence, or adds unneeded hedges such as 'can't be sure without running VoiceOver' while still concluding it holds.",
+   "miss": "Says the claim is false or unverified, or blocks the merge.",
+   "false_flag": "Saying black keys still announce bare 'MIDI n'. Saying the aria octave is off by one from the visible label. Saying keys above 127 render without a pitch name. Saying fractional or negative notes reach the label. Demanding tests for every key as a merge blocker. Calling the sharps-only naming (no flats) a defect against this claim. Asking the user questions instead of answering."
+  },
+  "source": "Sourdaw commit 1a3b9a3923 (PR #6210). noteNames.ts and its spec are verbatim from HEAD; the VirtualKeyboard.tsx excerpts (lines 79-98, 125-170, 856-954) and the new spec case are verbatim."
+ },
+ {
+  "id": "bulletproof-10",
+  "tag": "control",
+  "kind": "control",
+  "tools": [],
+  "files": {
+   "patches/vite@8.3.5.patch": "4810 bytes (body omitted; see source)",
+   "pnpm-workspace.yaml": "401 bytes (body omitted; see source)",
+   "pnpm-lock.yaml": "503 bytes (body omitted; see source)",
+   "package.json": "383 bytes (body omitted; see source)",
+   "vite.config.ts": "835 bytes (body omitted; see source)"
+  },
+  "request": "agents keep restarting the dev server inside lanes and every open tab goes into reload polling. asked you earlier whether `pnpm dev:no-hmr` avoids that. your answer:\n\n> Yes. `dev:no-hmr` is `NO_HMR=1 vite`, and vite.config.ts sets `server.hmr: process.env.NO_HMR !== '1'`, so hmr is `false`. Our `patches/vite@8.3.5.patch` adds `const hmrEnabled = __HMR_ENABLED__` to both dev clients (`dist/client/client.mjs` and `bundledDevClient.mjs`) and gates the `vite:ws:disconnect` branch — the one that logs \"server connection lost. Polling for restart...\" — on `hmrEnabled`. On the node side the patch replaces `__HMR_ENABLED__` with `config.server.hmr !== false`, so with `dev:no-hmr` the client gets `false` and never polls. pnpm-workspace.yaml registers the patch for vite@8.3.5, and the lockfile resolves vite 8.3.5 with that patch hash, so the installed client is the patched one.\n\nabout to tell every agent to use dev:no-hmr based on that. double-check it. files in the working dir.",
+  "key": {
+   "hit": "Confirms each link from the files. package.json has `dev:no-hmr: NO_HMR=1 vite`. vite.config.ts has `hmr: process.env.NO_HMR !== '1'`. The patch adds `hmrEnabled = __HMR_ENABLED__` and `if (hmrEnabled && hasDocument && !willUnload)` in both client.mjs and bundledDevClient.mjs, and dist/node/chunks/node.js gets `hmrEnabledReplacement = escapeReplacement(config.server.hmr !== false)` chained as `.replace(`__HMR_ENABLED__`, ...)`. pnpm-workspace.yaml registers patchedDependencies vite@8.3.5, and the lockfile resolves vite 8.3.5 with the matching patch_hash. Concludes the answer holds and the advice can go out.",
+   "partial": "Confirms but skips the node-side replacement or the lockfile link. Or adds non-blocking hedges like 'worth a quick manual check' while still confirming.",
+   "miss": "Says the claim is unsupported or wrong, or tells José not to send the advice.",
+   "false_flag": "Saying the patch may not be applied (the lockfile patch hash and patchedDependencies show it is). Saying `__HMR_ENABLED__` is never defined. Saying the patch covers only one of the two clients. Demanding a live dev-server run before the claim can be trusted. Treating the HMR-disabled e2e note in pnpm-workspace.yaml as evidence of a problem. Asking the user questions instead of answering."
+  },
+  "source": "Sourdaw HEAD, all verbatim: patches/vite@8.3.5.patch, vite.config.ts:140-160 (server.hmr), package.json dev:no-hmr script, the pnpm-workspace.yaml patch comment and patchedDependencies, and the pnpm-lock.yaml patch_hash. The claim is new for this item and true."
+ }
+]

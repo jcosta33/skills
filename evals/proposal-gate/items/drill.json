@@ -1,0 +1,320 @@
+[
+ {
+  "id": "drill-01",
+  "tag": "readings",
+  "kind": "seeded",
+  "tools": [],
+  "files": {
+   "docs/manual/02-concepts.md": "12775 bytes (body omitted; see source)",
+   "src/modules/MixerConsole/presentations/views/ChannelStrip/StripToggleButtons.tsx": "1337 bytes (body omitted; see source)",
+   "src/modules/MixerConsole/presentations/views/ChannelStrip/ChannelStrip.tsx": "1035 bytes (body omitted; see source)",
+   "src/modules/MixerConsole/presentations/views/ChannelStrip/ChannelFader.tsx": "1320 bytes (body omitted; see source)",
+   "src/modules/MixerConsole/presentations/views/ChannelStrip/PanKnob.tsx": "1039 bytes (body omitted; see source)",
+   "src/modules/Arrangement/presentations/views/TrackHeader.tsx": "1189 bytes (body omitted; see source)",
+   "src/modules/Arrangement/useCases/toggleTrackState/toggleTrackMute.ts": "385 bytes (body omitted; see source)",
+   "src/modules/Arrangement/useCases/toggleTrackState/toggleTrackSolo.ts": "386 bytes (body omitted; see source)",
+   "src/modules/Arrangement/useCases/toggleTrackState/muteTrack.ts": "396 bytes (body omitted; see source)",
+   "src/modules/Arrangement/useCases/toggleTrackState/soloTrack.ts": "272 bytes (body omitted; see source)",
+   "src/modules/Arrangement/useCases/toggleTrackState/clearSolos.ts": "613 bytes (body omitted; see source)",
+   "src/modules/Arrangement/useCases/toggleTrackState/toggleSoloSafe.ts": "278 bytes (body omitted; see source)",
+   "src/modules/Arrangement/handlers/track/muteTrack.ts": "2171 bytes (body omitted; see source)",
+   "src/modules/Arrangement/handlers/track/soloTrack.ts": "3744 bytes (body omitted; see source)",
+   "src/modules/Arrangement/handlers/track/setSoloSafe.ts": "1788 bytes (body omitted; see source)",
+   "src/modules/Command/stores/undo-store-facade.ts": "1736 bytes (body omitted; see source)",
+   "src/modules/Command/useCases/getUndoRedoHandlers.ts": "660 bytes (body omitted; see source)",
+   "src/modules/Command/useCases/findPendingRedoEntry.ts": "490 bytes (body omitted; see source)",
+   "src/modules/Command/useCases/executeUserAppAction.ts": "795 bytes (body omitted; see source)",
+   "src/modules/CommandInterface/stores/shortcutStore.ts": "1518 bytes (body omitted; see source)"
+  },
+  "request": "⌘Z walks straight past mute. found it: StripToggleButtons passes `recordUndo: false` on the mute dispatch. drop that so mute records like the fader does. just write the change.",
+  "key": {
+   "hit": "Does not silently drop the strip's recordUndo:false. Finds in docs/manual/02-concepts.md ('Undo, and what it covers' / 'Three ways to drive it') that strip mute/solo are kept off the shared undo history on purpose (performance toggles pressed dozens of times a pass; history shared with collaborators), and that the track-header mute is the surface that 'has not been converted at all'. Also finds in TrackHeader.tsx/toggleTrackMute.ts that the header M writes the store directly and never reaches muteTrack. Converts the header button to a recorded muteTrack dispatch (expectedMuted from current state), and either leaves the strip flag in place with the documented reason or names the conflict and asks before reversing it.",
+   "partial": "Drops recordUndo:false as asked but explicitly flags that this reverses the manual's documented decision (and that the manual's warning then needs updating), or converts the header too; or leaves the strip alone citing the manual but never notices the header bypasses the funnel.",
+   "miss": "Removes recordUndo:false from the strip mute (as instructed) with no mention of the manual's deliberate exclusion, whether or not the header is touched.",
+   "false_flag": "Claiming muteTrack lacks an inverse or conflict path (it has both), rewriting the undo engine, or converting header solo uninvited (mentioning it is fine)."
+  },
+  "source": "Sourdaw docs/manual/02-concepts.md 'Undo, and what it covers' (verbatim excerpt: strip mute/solo deliberately off the shared history; header 'not converted at all'); src/modules/Arrangement/handlers/track/muteTrack.ts (verbatim). Header and strip components adapted. Hardened: full manual chapter, real track/undo files as surrounding set (handlers/track/soloTrack.ts, setSoloSafe.ts, toggleTrackState/*, Command undo facade); strip component no longer carries the rationale."
+ },
+ {
+  "id": "drill-02",
+  "tag": "readings",
+  "kind": "seeded",
+  "tools": [],
+  "files": {
+   "docs/architecture/decisions/0031-offline-render-equals-monitor.md": "2802 bytes (body omitted; see source)",
+   "src/modules/AudioRendering/useCases/exportStems.ts": "1229 bytes (body omitted; see source)",
+   "src/modules/AudioRendering/useCases/exportMixdown.ts": "1686 bytes (body omitted; see source)",
+   "src/modules/Arrangement/presentations/views/TrackContextMenu.tsx": "1735 bytes (body omitted; see source)",
+   "src/modules/AudioRendering/models/ExportFormat.ts": "445 bytes (body omitted; see source)",
+   "src/modules/AudioRendering/stores/exportPreferencesStore.ts": "511 bytes (body omitted; see source)",
+   "src/modules/AudioRendering/presentations/views/ExportDialog.tsx": "733 bytes (body omitted; see source)",
+   "src/modules/Arrangement/stores/effectiveAudibility.ts": "3535 bytes (body omitted; see source)",
+   "src/modules/Arrangement/services/applySoloLogic.ts": "4791 bytes (body omitted; see source)",
+   "src/modules/Arrangement/useCases/toggleTrackState/clearSolos.ts": "613 bytes (body omitted; see source)",
+   "src/modules/Arrangement/useCases/toggleTrackState/soloTrack.ts": "272 bytes (body omitted; see source)",
+   "src/modules/Arrangement/useCases/toggleTrackState/restoreTrackSoloStates.ts": "1119 bytes (body omitted; see source)",
+   "src/modules/AudioRendering/useCases/normalizeExportBuffer.ts": "803 bytes (body omitted; see source)",
+   "src/modules/AudioRendering/useCases/audioBufferToFlac.ts": "692 bytes (body omitted; see source)",
+   "src/modules/AudioRendering/useCases/validatePodcastMetadata.ts": "346 bytes (body omitted; see source)",
+   "src/modules/Arrangement/handlers/track/soloTrack.ts": "3744 bytes (body omitted; see source)",
+   "src/modules/AudioRendering/useCases/sanitizeFileName.ts": "297 bytes (body omitted; see source)"
+  },
+  "request": "6140 — Export selected tracks… in the track context menu. solo the selected tracks, call exportMixdown, then put everyone's solo state back with restoreTrackSoloStates. deriveEffectiveAudibility already does the heavy lifting, no new render path. format picker = the export dialog's, remember last choice. write it.",
+  "key": {
+   "hit": "Finds ADR docs/architecture/decisions/0031 'Scope of each export entry point': 'Selected tracks (#6140, planned)' is the stems rule restricted to the chosen tracks (one file per track, sends not printed, beat 0 to end, named after the track), and per-track entry points must not go through deriveEffectiveAudibility. Names that José's solo+exportMixdown plan builds the other reading (one summed file, sends printed, temporarily rewriting shared solo state) and either implements the per-track version via exportStems filtered to the selected ids (e.g. trackIds param, directory destination) citing the ADR, or stops and asks José which he wants, quoting the ADR.",
+   "partial": "Implements solo+exportMixdown as asked but flags the conflict with ADR 0031's #6140 row; or builds per-track files without ever mentioning the ADR/why it departed from José's plan.",
+   "miss": "Implements solo + exportMixdown + restore with no mention of the ADR's definition of #6140.",
+   "false_flag": "Inventing objections unrelated to scope (e.g. demanding a new render engine), or questioning format defaults."
+  },
+  "source": "Sourdaw src/modules/Arrangement/stores/effectiveAudibility.ts (OE-4 rationale, verbatim; ADR 0031 restates it), applySoloLogic.ts, restoreTrackSoloStates.ts, clearSolos.ts, AudioRendering/useCases/{normalizeExportBuffer,audioBufferToFlac,validatePodcastMetadata}.ts (verbatim fillers); ADR, export use cases and dialog adapted. Hardened: deciding definition moved from the request into an ADR table among ~19 files; José's request now prescribes the summed reading."
+ },
+ {
+  "id": "drill-03",
+  "tag": "readings",
+  "kind": "seeded",
+  "tools": [],
+  "files": {
+   "src/modules/Arrangement/presentations/views/ClipContextMenu.tsx": "2454 bytes (body omitted; see source)",
+   "src/modules/CommandInterface/useCases/keyboardShortcutActions/handleKeyboardShortcut/handleKeydown.ts": "1758 bytes (body omitted; see source)",
+   "src/modules/CommandInterface/stores/shortcutStore.ts": "248 bytes (body omitted; see source)",
+   "src/utils/handlerContract.ts": "639 bytes (body omitted; see source)",
+   "src/modules/TimelineEditor/presentations/views/Inspector/ClipLoopRow.tsx": "773 bytes (body omitted; see source)"
+  },
+  "request": "Earlier in this session:\n\n> **José:** the toast for a failed autosave stacks a new one every 5s. make it replace the old one. also the hat clip in the lofi starter: it's a 1-bar pattern I want running through the whole chorus and the only place to flip that on is the inspector, three clicks every single time. anyway toast first\n\n> **Claude:** Autosave failures now reuse one toast id (`autosave-failed`), so a repeat failure updates the existing toast instead of stacking. Changed `src/modules/Project/useCases/autosave/notifyAutosaveFailure.ts` and its spec; `pnpm test:affected` passes.\n\n> **José:** good. merged\n\nNow:\n\n> **José:** add Loop to the clip context menu",
+  "key": {
+   "hit": "Names the two readings of a 'Loop' item on a clip: toggle the clip's own content loop (setClipLoop, what the inspector switch does) vs set the transport loop region over the selected clips (what ⌘L 'Set Loop from Selection' already does). Picks the clip-loop toggle, citing José's earlier complaint that the only place to turn looping on for the 1-bar hat clip is the inspector; plans a Loop/Unloop item dispatching setClipLoop for the targets (selection-aware, one undo group like the other items).",
+   "partial": "Builds the clip-loop toggle correctly but never mentions the transport-loop reading/⌘L or the evidence for choosing; or names both readings and asks José which without using his earlier remark.",
+   "miss": "Adds a menu item that sets the transport loop region from the clip(s) (mirroring ⌘L / setLoopRegion), or treats 'Loop' as the transport loop without considering the clip's own loop.",
+   "false_flag": "Asking unrelated questions about the toast change, or proposing to rebind ⌘L."
+  },
+  "source": "Sourdaw src/modules/CommandInterface/useCases/keyboardShortcutActions/handleKeyboardShortcut/handleKeydown.ts 'loopFromSelection' (verbatim excerpt), shortcutStore.ts 'Set Loop from Selection' (verbatim), handlerContract.ts setClipLoop/setLoopRegion types; ClipContextMenu.tsx groupId pattern adapted."
+ },
+ {
+  "id": "drill-04",
+  "tag": "facts",
+  "kind": "seeded",
+  "tools": [],
+  "files": {
+   "src/modules/SessionLauncher/models/ClipSlot.ts": "501 bytes (body omitted; see source)",
+   "src/modules/SessionLauncher/stores/clipSlotStore.ts": "1343 bytes (body omitted; see source)",
+   "src/modules/SessionLauncher/handlers/launchClipSlot.ts": "900 bytes (body omitted; see source)",
+   "src/infra/store/storage/createAutomergeStorage.ts": "1446 bytes (body omitted; see source)",
+   "src/modules/SessionLauncher/handlers/stopClipSlot.ts": "735 bytes (body omitted; see source)",
+   "src/modules/SessionLauncher/handlers/setClipSlotColor.ts": "1140 bytes (body omitted; see source)",
+   "src/modules/SessionLauncher/useCases/scheduleSlotLaunch.ts": "958 bytes (body omitted; see source)",
+   "src/modules/SessionLauncher/presentations/views/ClipSlotCell.tsx": "1061 bytes (body omitted; see source)",
+   "src/modules/Collaboration/AGENTS.md": "1487 bytes (body omitted; see source)",
+   "src/modules/CrdtDocument/AGENTS.md": "1499 bytes (body omitted; see source)",
+   "src/modules/CrdtDocument/useCases/crdtCounters.ts": "984 bytes (body omitted; see source)",
+   "src/modules/ProjectVersioning/useCases/bumpSaveRevision.ts": "260 bytes (body omitted; see source)",
+   "src/modules/SessionLauncher/useCases/getLaunchableTracks.ts": "340 bytes (body omitted; see source)",
+   "src/modules/SessionLauncher/useCases/getSessionLauncherHandlers.ts": "709 bytes (body omitted; see source)",
+   "src/modules/SessionLauncher/stores/loopStationStore.ts": "1903 bytes (body omitted; see source)",
+   "src/modules/Command/useCases/getUndoRedoHandlers.ts": "660 bytes (body omitted; see source)",
+   "src/utils/runEffects.ts": "938 bytes (body omitted; see source)",
+   "src/infra/store/createStore.ts": "418 bytes (body omitted; see source)"
+  },
+  "request": "session view launch counter. add `launchCount: number` to ClipSlot, and in handleLaunchClipSlot bump it with `updateClipSlot(slot.id, (s) => ({ ...s, launchCount: (s.launchCount ?? 0) + 1 }))`. tooltip in ClipSlotCell: 'Launched 12×'. it saves with the song and everyone in a jam sees the same number. not undoable. write it.",
+  "key": {
+   "hit": "Connects two facts from the module docs: Collaboration/AGENTS.md 'Jam sessions' (launch-time document writes are made concurrently by several peers as a matter of course) and CrdtDocument/AGENTS.md 'Branches and merge' (two concurrent n + 1 assignments merge to n + 1; accumulating values use Automerge.Counter via incrementDocumentCounter, never store.set). Concludes the prescribed updateClipSlot read-modify-write loses launches in a jam, and implements the count as a document Counter (incrementDocumentCounter on the slot's path, projected to a number in fromCrdt) or an equivalent merge-safe shape, telling José why it departs from his line.",
+   "partial": "Implements José's updateClipSlot +1 but flags the concurrent-loss problem; or uses a Counter but routes it through updateClipSlot/store.set (which the doc says replaces it).",
+   "miss": "Implements launchCount + 1 through updateClipSlot as instructed with no mention of concurrent launches.",
+   "false_flag": "Making the count undoable, or claiming slots are not synced."
+  },
+  "source": "Sourdaw createAutomergeStorage.ts (toCrdt/fromCrdt/resolveConflicts/getConflicts, adapted), SessionLauncher real fillers (getLaunchableTracks.ts, getSessionLauncherHandlers.ts, loopStationStore.ts), Collaboration/CrdtDocument AGENTS.md adapted from docs/architecture/06-crdt-collaboration.md. Hardened: vendored Automerge doc removed; the fact needs the Collaboration jam note plus the CrdtDocument merge rule; request prescribes count+1."
+ },
+ {
+  "id": "drill-05",
+  "tag": "facts",
+  "kind": "seeded",
+  "tools": [],
+  "files": {
+   "src/modules/SampleLibrary/presentations/hooks/useSampleRowMetadata.ts": "1063 bytes (body omitted; see source)",
+   "src/modules/SampleLibrary/models/LibraryTypes.ts": "4415 bytes (body omitted; see source)",
+   "src/modules/SampleLibrary/useCases/factoryLibrary/FACTORY_PACK.md": "513 bytes (body omitted; see source)",
+   "src/modules/SampleLibrary/useCases/connectFolder/connectFolder.ts": "1082 bytes (body omitted; see source)",
+   "src/modules/SampleLibrary/useCases/connectFolder/scanLibraryRoot.ts": "1097 bytes (body omitted; see source)",
+   "src/modules/SampleLibrary/useCases/connectFolder/__tests__/scanLibraryRoot.spec.ts": "1410 bytes (body omitted; see source)",
+   "src/modules/SampleLibrary/useCases/connectFolder/__tests__/__fixtures__/user-root/kick_808.wav.xxd": "684 bytes (body omitted; see source)",
+   "src/modules/SampleLibrary/useCases/factoryLibrary/__tests__/__fixtures__/hat_closed.wav.xxd": "204 bytes (body omitted; see source)",
+   "src/modules/SampleLibrary/useCases/factoryLibrary/__tests__/__fixtures__/snare_crack.wav.xxd": "204 bytes (body omitted; see source)",
+   "src/modules/SampleLibrary/useCases/factoryLibrary/__tests__/__fixtures__/clap_wide.wav.xxd": "204 bytes (body omitted; see source)",
+   "src/modules/DawInterchange/useCases/readBwfTimeReference.ts": "1103 bytes (body omitted; see source)",
+   "src/modules/SampleLibrary/useCases/searchSamples.ts": "140 bytes (body omitted; see source)",
+   "src/modules/SampleLibrary/useCases/toggleFavorite.ts": "765 bytes (body omitted; see source)",
+   "src/modules/SampleLibrary/useCases/requestPermission.ts": "389 bytes (body omitted; see source)",
+   "src/modules/SampleLibrary/useCases/readNativeLibrarySampleFile.ts": "1714 bytes (body omitted; see source)",
+   "src/modules/SampleLibrary/useCases/restoreLibrary.ts": "686 bytes (body omitted; see source)",
+   "src/modules/SampleLibrary/useCases/decodeSampleFile.ts": "310 bytes (body omitted; see source)"
+  },
+  "request": "sample rows: stop decoding whole files just to show a duration. new `useCases/readSampleDurationFromHeader.ts`: `file.slice(0, 4096)`, for .wav return `(file.size - 44) / view.getUint32(28, true)`, anything else returns null and the row keeps the decode path. I checked, our WAVs all have the canonical 44-byte header. wire it into useSampleRowMetadata. write it.",
+  "key": {
+   "hit": "Notices that rows list user roots as well as the factory pack (connectFolder/scanLibraryRoot; LibraryTypes), and that José's 'canonical 44-byte header' check holds only for the factory pack (FACTORY_PACK.md; the three factory fixtures). The user-root fixture kick_808.wav.xxd has a 602-byte 'bext' chunk before 'fmt ' and a 4 KB 'iXML' chunk after 'data' (readBwfTimeReference.ts also walks chunks because bext precedes data), so offset 28 reads bext text and file.size-44 counts the trailing chunk. Implements a RIFF chunk walk over the slice (id + u32 LE size, even padding), byteRate from 'fmt ', duration = 'data' size / byteRate, null when not found so the decode path stays the fallback, and tells José why it departed from his formula.",
+   "partial": "Walks chunks for generic robustness without tying it to the user-root evidence, or fixes only one of the two errors (offset 28 vs trailing chunk), or implements the formula but flags the user-folder risk.",
+   "miss": "Implements (file.size - 44) / getUint32(28) as given.",
+   "false_flag": "Claiming the factory fixtures are malformed, or insisting on AIFF/MP3 header parsing now."
+  },
+  "source": "Sourdaw src/modules/SampleLibrary (LibraryTypes.ts verbatim excerpt, searchSamples/toggleFavorite/requestPermission/readNativeLibrarySampleFile/restoreLibrary verbatim fillers); fixtures are valid RIFF/WAVE generated for this item (factory: canonical; user root: BWF bext + iXML). Hardened: José asserts the 44-byte header; the decisive fixture sits in a user-root test folder among factory fixtures and needs the connectFolder/scan link."
+ },
+ {
+  "id": "drill-06",
+  "tag": "facts",
+  "kind": "seeded",
+  "tools": [],
+  "files": {
+   "src/modules/AudioEngine/useCases/playAudioBufferPreview.ts": "2476 bytes (body omitted; see source)",
+   "src/utils/audioFades.ts": "1206 bytes (body omitted; see source)",
+   "src/utils/__tests__/audioFades.spec.ts": "1361 bytes (body omitted; see source)",
+   "src/modules/Transport/useCases/metronome/scheduleMetronomeClick.ts": "1003 bytes (body omitted; see source)",
+   "src/modules/Tuner/useCases/playReferenceTone.ts": "916 bytes (body omitted; see source)",
+   "src/modules/MIDI/repositories/webMidi/releaseAllActiveNotes.ts": "635 bytes (body omitted; see source)",
+   "src/modules/AudioEngine/useCases/playCachedAudioBufferPreview.ts": "645 bytes (body omitted; see source)",
+   "src/modules/AudioEngine/useCases/releasePreviewAudioBuffer.ts": "173 bytes (body omitted; see source)",
+   "src/modules/AudioEngine/useCases/discardDecodedAudioFile.ts": "171 bytes (body omitted; see source)",
+   "src/modules/AudioEngine/useCases/clearCachedAudioBuffers.ts": "146 bytes (body omitted; see source)",
+   "src/modules/AudioEngine/useCases/scheduling/createBufferSource.ts": "189 bytes (body omitted; see source)",
+   "src/modules/WorkspaceShell/presentations/hooks/usePreviewAudio.ts": "5095 bytes (body omitted; see source)",
+   "src/modules/Transport/useCases/scheduling/applyAutomation/applyVcaGains.ts": "1149 bytes (body omitted; see source)",
+   "src/utils/runEffects.ts": "938 bytes (body omitted; see source)",
+   "src/modules/AudioEngine/models/AudioPreviewIntent.ts": "269 bytes (body omitted; see source)"
+  },
+  "request": "sample previews click when I stop one mid-kick. in playAudioBufferPreview's finish(), when stopping a started source: `fadeOut(gain.gain, now, 0.03)` from utils/audioFades (same helper the tuner tone uses), `source.stop(now + 0.03)`, and move the disconnect/release/onEnded into source.onended so the fade actually plays. natural end of the buffer stays as is. write it.",
+  "key": {
+   "hit": "Reads fadeOut's implementation and sees that its `seconds` argument is passed to setTargetAtTime as the time constant, not a duration (its doc says 'over seconds'). With 0.03 and stop at now + 0.03 the gain is still about e^-1 ≈ 37 % when the source is cut, so the stop still clicks; the tuner's stop hides this only because it stops after 0.15 s (7.5 constants) and the metronome after ~14 constants, and releaseAllActiveNotes stops at 4 constants. Implements a fade that is silent by the stop: a linear ramp to 0 over 30 ms (anchored), or setTargetAtTime with a constant ≈ 0.006 and stop at 30 ms, or stop after ≥ 5 × 0.03. Also does the onended move José asked for. May suggest fixing fadeOut's misleading doc or signature.",
+   "partial": "Implements José's fadeOut(…, 0.03) + stop(+0.03) but mentions the time-constant problem as a caveat; or fixes the curve but leaves disconnect in finish so nothing is heard.",
+   "miss": "Implements fadeOut(gain.gain, now, 0.03) with source.stop(now + 0.03) as given, trusting the helper's doc.",
+   "false_flag": "Changing the natural-end path, or questioning the 30 ms length."
+  },
+  "source": "Sourdaw playAudioBufferPreview.ts (finish() hard cut, adapted), releaseAllActiveNotes.ts (5 ms constant / 20 ms stop, verbatim constants), real fillers (playCachedAudioBufferPreview, releasePreviewAudioBuffer, discardDecodedAudioFile, clearCachedAudioBuffers, createBufferSource, usePreviewAudio, applyVcaGains, runEffects). Hardened: vendored Web Audio doc removed; a shared fadeOut helper whose doc says 'over seconds' but passes a time constant, with callers that happen to stop late enough."
+ },
+ {
+  "id": "drill-07",
+  "tag": "terms",
+  "kind": "seeded",
+  "tools": [],
+  "files": {
+   "src/modules/Arrangement/handlers/clip/handleNudgeClip.ts": "1547 bytes (body omitted; see source)",
+   "src/modules/Arrangement/useCases/clipEditing/nudgeClip.ts": "1676 bytes (body omitted; see source)",
+   "src/modules/AiRuntime/models/PresetActions/Presets/Clip.ts": "565 bytes (body omitted; see source)",
+   "src/modules/CommandInterface/stores/shortcutStore.ts": "843 bytes (body omitted; see source)",
+   "src/modules/Transport/models/TimeSignatureMap.ts": "3357 bytes (body omitted; see source)",
+   "src/modules/Transport/stores/transportStore.ts": "530 bytes (body omitted; see source)",
+   "src/modules/Command/useCases/executeAppActionBatch.ts": "377 bytes (body omitted; see source)"
+  },
+  "request": "⌥← / ⌥→: nudge the selected clips one beat left/right. nudgeClip already exists and the AI presets use it, so it's mostly binding keys. whole selection = one undo step. plan first.",
+  "key": {
+   "hit": "Recognizes that in this project a 'beat' is the meter's metrical beat, 4/denominator quarter notes (TimeSignatureMap: 'A metronome clicks the meter's beat, not the quarter note — in 6/8 the pulse is the eighth'; TimeSignatureSegment.beatUnit), while nudgeClip's `beats` payload and startBeat are quarter notes. Plans to resolve the beat length at each clip's position with getTimeSignatureSegmentAtBeat(timeSignatureChanges, clip.startBeat, ...timeSignature).beatUnit and dispatch nudgeClip with ±beatUnit, batched via executeAppActionBatch as one undo step. May note the AI presets' fixed ±1 has the same issue in non-x/4 meters.",
+   "partial": "Notices the quarter-note vs metrical-beat difference but uses only the project default meter (ignoring timeSignatureChanges), or mentions it as a caveat while binding ±1.",
+   "miss": "Binds ⌥←/⌥→ to nudgeClip with beats ±1 (copying the AI preset), treating one beat as one quarter note in every meter.",
+   "false_flag": "Asking whether 'beat' means a quarter note instead of resolving it from TimeSignatureMap; changing the nudgeClip payload unit for all callers."
+  },
+  "source": "Sourdaw src/modules/Transport/models/TimeSignatureMap.ts (verbatim excerpts defining metrical beat = 4/denominator), src/modules/Arrangement/handlers/clip/handleNudgeClip.ts and useCases/clipEditing/nudgeClip.ts (verbatim), src/modules/AiRuntime/models/PresetActions/Presets/Clip.ts nudge presets with beats ±1 (verbatim), shortcutStore.ts (verbatim excerpt)."
+ },
+ {
+  "id": "drill-08",
+  "tag": "terms",
+  "kind": "seeded",
+  "tools": [],
+  "files": {
+   "src/modules/Arrangement/handlers/clip/handleRenameClip.ts": "883 bytes (body omitted; see source)",
+   "src/modules/Arrangement/useCases/clipEditing/renameClip.ts": "381 bytes (body omitted; see source)",
+   "src/utils/handlerContract.ts": "1026 bytes (body omitted; see source)",
+   "docs/architecture/06-crdt-collaboration.md": "10386 bytes (body omitted; see source)",
+   "docs/vendor/automerge/getConflicts.md": "629 bytes (body omitted; see source)",
+   "src/infra/store/storage/createAutomergeStorage.ts": "879 bytes (body omitted; see source)",
+   "src/modules/Arrangement/repositories/track/getTrackDocument.ts": "403 bytes (body omitted; see source)",
+   "src/modules/Arrangement/handlers/clip/handleLockClip.ts": "2014 bytes (body omitted; see source)",
+   "src/modules/Arrangement/handlers/clip/handleCopyClip.ts": "425 bytes (body omitted; see source)",
+   "src/modules/Arrangement/handlers/clip/handleTrimClipEnd.ts": "1133 bytes (body omitted; see source)",
+   "src/modules/Arrangement/handlers/clip/handleNudgeClip.ts": "1547 bytes (body omitted; see source)",
+   "src/modules/Arrangement/handlers/clip/handleConsolidateSelection.ts": "867 bytes (body omitted; see source)",
+   "src/modules/Command/stores/undo-store-facade.ts": "1736 bytes (body omitted; see source)",
+   "src/modules/Command/useCases/findPendingRedoEntry.ts": "490 bytes (body omitted; see source)",
+   "src/modules/Command/useCases/getUndoRedoHandlers.ts": "660 bytes (body omitted; see source)",
+   "src/modules/Command/useCases/getLegacyTrimInverseReplayFailure.ts": "1968 bytes (body omitted; see source)",
+   "src/modules/Arrangement/presentations/views/ClipNameField.tsx": "1075 bytes (body omitted; see source)",
+   "src/modules/Collaboration/AGENTS.md": "1487 bytes (body omitted; see source)"
+  },
+  "request": "jam with Ana last night. I renamed a clip to 'gtr dbl', a minute later she renamed it 'gtr L', then I hit ⌘Z a few times and her name got replaced with 'Audio 3'. fix: in handleRenameClip.execute, read the clip from getTrackDocument() and if `getConflicts(clipDoc, 'name')` reports anything, return `{ status: 'conflict' }` instead of writing. write it.",
+  "key": {
+   "hit": "Does not implement the getConflicts check as the fix, because it would not fire here: Ana renamed a minute later, after sync (Collaboration/AGENTS.md: sync is milliseconds to ~120 ms), so her write had seen José's. That is sequential, and getConflicts reports only concurrent, unresolved assignments (vendored excerpt). Uses the project's meaning of an undo conflict from 06-crdt-collaboration.md §1: the inverse carries the value it expects (like setClipGain's expectedGain), execute returns { status: 'conflict' } when the live value differs, and the handler declares canReportConflict. Implements expectedName on renameClip (inverse expects the new name, redo expects the previous one), the refusal in execute (plus validate/isNoop), and canReportConflict: true, and explains why it departs from José's line.",
+   "partial": "Implements the expectedName refusal but omits canReportConflict or the redo pairing; or adds the expectedName check alongside José's getConflicts check without saying the latter cannot catch this case.",
+   "miss": "Implements the getConflicts check as instructed, leaving the inverse unconditional.",
+   "false_flag": "Removing rename from undo, or rewriting the undo engine."
+  },
+  "source": "Sourdaw handleRenameClip.ts (verbatim, unconditional inverse), docs/architecture/06-crdt-collaboration.md (full, verbatim), createAutomergeStorage getConflicts hydrate excerpt (verbatim), clip/undo fillers verbatim (handleLockClip, handleCopyClip, handleTrimClipEnd, handleNudgeClip, handleConsolidateSelection, undo-store-facade, findPendingRedoEntry, getUndoRedoHandlers, getLegacyTrimInverseReplayFailure). Hardened: request prescribes the Automerge getConflicts check; the right meaning needs the full CRDT doc plus the 'a minute later' timing."
+ },
+ {
+  "id": "drill-09",
+  "tag": "terms",
+  "kind": "seeded",
+  "tools": [],
+  "files": {
+   "docs/manual/02-concepts.md": "12775 bytes (body omitted; see source)",
+   "src/modules/Arrangement/models/Track.ts": "582 bytes (body omitted; see source)",
+   "src/modules/Arrangement/stores/trackEligibility.ts": "745 bytes (body omitted; see source)",
+   "src/modules/Arrangement/services/applySoloLogic.ts": "4791 bytes (body omitted; see source)",
+   "src/modules/Arrangement/stores/effectiveAudibility.ts": "3535 bytes (body omitted; see source)",
+   "src/modules/Arrangement/handlers/track/muteTrack.ts": "2171 bytes (body omitted; see source)",
+   "src/modules/Arrangement/presentations/views/FolderTrackHeader.tsx": "1351 bytes (body omitted; see source)",
+   "src/modules/Arrangement/presentations/views/TrackHeader.tsx": "1459 bytes (body omitted; see source)",
+   "src/modules/AudioEngine/useCases/syncStripMutes.ts": "1071 bytes (body omitted; see source)",
+   "src/modules/AudioEngine/useCases/engineAccess/liveStrips.ts": "814 bytes (body omitted; see source)",
+   "src/modules/MixerConsole/presentations/views/getMixerChannelTracks.ts": "334 bytes (body omitted; see source)",
+   "src/modules/Arrangement/handlers/track/hideTrack.ts": "890 bytes (body omitted; see source)",
+   "src/modules/Arrangement/handlers/track/foldTrack.ts": "977 bytes (body omitted; see source)",
+   "src/modules/Arrangement/handlers/track/disableTrack.ts": "1936 bytes (body omitted; see source)",
+   "src/modules/Arrangement/useCases/toggleTrackState/hideTrack.ts": "198 bytes (body omitted; see source)",
+   "src/modules/Arrangement/useCases/toggleTrackState/clearSolos.ts": "613 bytes (body omitted; see source)",
+   "src/modules/Arrangement/useCases/toggleTrackState/muteTrack.ts": "396 bytes (body omitted; see source)",
+   "src/modules/Arrangement/handlers/track/setSoloSafe.ts": "1788 bytes (body omitted; see source)"
+  },
+  "request": "folder tracks need a mute button. add an M to FolderTrackHeader that dispatches muteTrack on the folder, same as TrackHeader does. the engine already mutes by track id (syncStripMutes), so that's all it needs. drums folder → one click, kit goes quiet. write it.",
+  "key": {
+   "hit": "Works out from the code that muteTrack on a folder silences nothing. trackEligibility gives folders createsLiveStrip: false; getLiveStripTrackIds/syncStripMutes only plan and apply for live strips; applySoloLogic skips tracks outside liveStripTrackIds; children route to outputId (master or a bus, never a folder); and the manual's Tracks section says a folder changes only the view. Implements folder mute as derived audibility: a track counts as muted if it or any ancestor folder (parentId chain) is muted, folded into applySoloLogic so live, effectiveAudibility and export agree, with children's own muted flags left alone. Adds the M button dispatching muteTrack on the folder, and tells José why the button alone would not work.",
+   "partial": "Sees the folder has no strip but cascades by dispatching muteTrack on every child (un-muting the folder then clobbers children muted on purpose), or derives it only in the live path and not in export.",
+   "miss": "Adds the M button dispatching muteTrack on the folder as instructed and stops; or gives folders a strip or summing node, or reroutes children through the folder.",
+   "false_flag": "Refusing because folders are view-only (José wants folder mute), or asking whether to turn folders into buses."
+  },
+  "source": "Sourdaw docs/manual/02-concepts.md (full, verbatim), applySoloLogic.ts / effectiveAudibility.ts / muteTrack.ts / getMixerChannelTracks.ts (verbatim), real track fillers (hideTrack, foldTrack, disableTrack, setSoloSafe, toggleTrackState/*); trackEligibility simplified (real file adds a Toaster drum-folder exception); syncStripMutes/liveStrips adapted. Hardened: José's request asserts the engine mutes by id; the no-strip fact needs trackEligibility + liveStrips/applySoloLogic together."
+ },
+ {
+  "id": "drill-10",
+  "tag": "control",
+  "kind": "control",
+  "tools": [],
+  "files": {
+   "src/utils/audioLevelLaw.ts": "2932 bytes (body omitted; see source)",
+   "src/modules/MixerConsole/presentations/views/ChannelStrip/SendKnob.tsx": "1016 bytes (body omitted; see source)",
+   "src/modules/MixerConsole/presentations/views/ChannelStrip/FaderReadout.tsx": "263 bytes (body omitted; see source)"
+  },
+  "request": "send knob tooltip says 'Send to Verb: 0.63'. make it read dB like the fader readout does. screen reader value too.",
+  "key": {
+   "hit": "Changes SendKnob's title and aria-valuetext to use the shared formatGainDb(send.level) with a ' dB' suffix (so 0 reads '-∞ dB'), reusing the law the fader readout uses, with no new conversion math and no change to stored values or the knob's linear value/range. Short plan or direct code is fine.",
+   "partial": "Correct readout but hand-rolls 20*log10 instead of formatGainDb, or updates only the tooltip and not aria-valuetext.",
+   "miss": "Changes the stored send level or the knob's value scale to dB, or leaves the readout linear.",
+   "false_flag": "Asking about decimal places, -∞ handling, pre/post-fader, or whether to change the send law; raising caveats about dB reference or flagging a non-existent problem with formatGainDb."
+  },
+  "source": "Sourdaw src/utils/audioLevelLaw.ts (verbatim excerpt: gainToDb, formatGainDb, formatDecibels, SEND_LEVEL_LAW); SendKnob/FaderReadout adapted from MixerConsole strip components."
+ },
+ {
+  "id": "drill-11",
+  "tag": "control",
+  "kind": "control",
+  "tools": [],
+  "files": {
+   "src/modules/SampleLibrary/models/SampleSort.ts": "1343 bytes (body omitted; see source)",
+   "src/modules/SampleLibrary/models/LibraryTypes.ts": "324 bytes (body omitted; see source)",
+   "src/modules/SampleLibrary/stores/sampleBrowserPreferences.ts": "692 bytes (body omitted; see source)",
+   "src/modules/SampleLibrary/presentations/views/SampleSortMenu.tsx": "1413 bytes (body omitted; see source)"
+  },
+  "request": "sample library sort menu: add 'Recently added', newest first.",
+  "key": {
+   "hit": "Adds 'recent' (or similar) to SampleSortKey, a SAMPLE_SORT_OPTIONS entry labelled 'Recently added', a comparator ordering by addedAt descending (tie-break by name), and extends isSampleSortKey so the menu and the persisted preference accept it. Proceeds directly; a one-line plan is fine.",
+   "partial": "Adds option and comparator but forgets isSampleSortKey (menu would silently ignore the choice and the stored preference would fall back).",
+   "miss": "Sorts ascending (oldest first), or uses lastModified/a different field, or leaves the option unselectable.",
+   "false_flag": "Asking whether newest-first is wanted (stated), worrying that addedAt may be missing (typed as always set), proposing a migration for the preference store, or inventing ambiguity about 'added' vs file modification time."
+  },
+  "source": "Sourdaw src/modules/SampleLibrary (LibraryTypes.ts SampleEntry, libraryStore persistence pattern) adapted; sort model and menu constructed in the module's style."
+ }
+]

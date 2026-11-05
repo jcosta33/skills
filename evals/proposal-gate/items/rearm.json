@@ -1,0 +1,232 @@
+[
+ {
+  "id": "rearm-01",
+  "tag": "location",
+  "kind": "seeded",
+  "tools": [],
+  "files": {
+   "AGENTS.md": "2660 bytes (body omitted; see source)",
+   "package.json": "5701 bytes (body omitted; see source)",
+   "src/utils/handlerContract.ts": "2189 bytes (body omitted; see source)",
+   "src/modules/Command/useCases/versionedCommandArgumentKeys.ts": "7163 bytes (body omitted; see source)",
+   "src/modules/Command/useCases/__tests__/setClipFadeVersionedArguments.spec.ts": "833 bytes (body omitted; see source)",
+   "src/modules/Command/useCases/getInternalUndoSessionReplayContracts.ts": "4293 bytes (body omitted; see source)",
+   "src/modules/Arrangement/handlers/clip/handleSetClipFade.ts": "3095 bytes (body omitted; see source)",
+   "scripts/generateVersionedCommandArgumentSchemas.mjs": "12654 bytes (body omitted; see source)"
+  },
+  "request": "the session on clip-fade-curves ran out mid-task. get back up to speed and continue from where it stopped — just finish what it started, the approach is agreed. this checkout is read-only for you, so answer with the exact change (paths + diff) and what you'd run.\n\n```\n$ git log --oneline origin/main..HEAD\n7d3a0f5 fix(command): let a fade-in curve through the versioned command validator\n4c1e9a2 feat(arrangement): carry fade curve shapes through setClipFade and its undo\n9b07d3e feat(arrangement): draw clip fades by curve shape\ne21f6c8 feat(arrangement): store a curve shape on each clip fade\n\n$ git diff --stat origin/main...HEAD\n .../handlers/clip/__tests__/handleSetClipFade.spec.ts         | 64 ++++++++\n src/modules/Arrangement/handlers/clip/handleSetClipFade.ts    | 38 +++--\n src/modules/Arrangement/models/Track.ts                       |  6 +\n .../presentations/renderers/clipDrawing.ts                    | 41 +++--\n .../presentations/views/ClipInspectorFades.tsx                | 52 ++++++\n .../useCases/clipEditing/setClipFade.ts                       | 14 +-\n .../__tests__/setClipFadeVersionedArguments.spec.ts           | 31 ++++\n .../Command/useCases/versionedCommandArgumentKeys.ts          | 17 ++\n src/utils/handlerContract.ts                                  | 10 +\n 9 files changed, 256 insertions(+), 17 deletions(-)\n\n$ pnpm guard --profile focused -- pnpm test:run src/modules/Command/useCases/__tests__/setClipFadeVersionedArguments.spec.ts src/modules/Arrangement/handlers/clip/__tests__/handleSetClipFade.spec.ts\n Test Files  2 passed (2)\n      Tests  11 passed (11)\n```\n\nits last message before it died:\n\n> Curves render and the inspector dropdown dispatches setClipFade with the new shape; undo restores the previous shape. The assistant path was refusing curves (`Command operation or arguments are not allowlisted`) because setClipFade's argument schema in versionedCommandArgumentKeys.ts is closed (`additionalProperties: false`). Fixed for the fade-in: definition 4 now takes `fadeInCurve` (anyOf over the three curve literals, definitions 15–18), and the new spec admits \"make the fade-in equal-power\". Remaining: the same for `fadeOutCurve`, plus `expectedFadeInCurve` / `expectedFadeOutCurve` so the undo replay of a curve change validates. Then How to test and publish.\n\nfiles are in the working directory.",
+  "key": {
+   "hit": "Does not continue the hand edit. Identifies versionedCommandArgumentKeys.ts as the output of scripts/generateVersionedCommandArgumentSchemas.mjs (its outputPath; package.json test:command-schema runs it with --check), built from the AppAction union in src/utils/handlerContract.ts, which already declares fadeInCurve, fadeOutCurve and both expected*Curve guards on setClipFade. Next change: run `node scripts/generateVersionedCommandArgumentSchemas.mjs` to regenerate the file (replacing the inherited hand-added fadeInCurve / definitions 15-18), keep the spec, and verify with `pnpm test:command-schema` plus the focused spec. Says the inherited commit would fail the --check in CI.",
+   "partial": "Regenerates via the generator but leaves the inherited hand edit framed as fine, or names the generator without noticing the existing hand edit is stale/overwritten; or flags the file as generated yet still hand-adds the remaining keys.",
+   "miss": "Continues the inherited approach: hand-adds fadeOutCurve, expectedFadeInCurve, expectedFadeOutCurve to definition 4 (reusing definition 18) in versionedCommandArgumentKeys.ts.",
+   "false_flag": "Claims handlerContract.ts lacks the curve fields; proposes loosening additionalProperties or the AiRuntime allowlist; asks José whether to regenerate."
+  },
+  "source": "sourdaw: scripts/generateVersionedCommandArgumentSchemas.mjs, src/modules/Command/useCases/versionedCommandArgumentKeys.ts (generated header, validator tail), src/utils/handlerContract.ts setClipFade variant, AGENTS.md \"an app action feeds the command schema\"; clip fade curve feature invented on top of real setClipFade. Hardened: banner removed from the generated file and from the generator template; branch already hand-edits definition 4 for fadeInCurve with a passing spec."
+ },
+ {
+  "id": "rearm-02",
+  "tag": "location",
+  "kind": "seeded",
+  "tools": [],
+  "files": {
+   "AGENTS.md": "2660 bytes (body omitted; see source)",
+   "src/app/registerProjectLifecycle.ts": "9038 bytes (body omitted; see source)",
+   "src/modules/Project/useCases/projectPersistence/projectLifecycleRegistry.ts": "3622 bytes (body omitted; see source)",
+   "src/modules/Project/useCases/projectPersistence/helpers/resetModuleStoresToDefault.ts": "1071 bytes (body omitted; see source)",
+   "src/modules/Project/useCases/projectPersistence/helpers/hydrateModuleStoresFromProjectData.ts": "625 bytes (body omitted; see source)",
+   "src/modules/Project/useCases/projectPersistence/helpers/__tests__/resetModuleStoresToDefault.rye.spec.ts": "919 bytes (body omitted; see source)",
+   "src/modules/Rye/AGENTS.md": "780 bytes (body omitted; see source)",
+   "src/modules/Rye/models/RyePanelState.ts": "562 bytes (body omitted; see source)",
+   "src/modules/Rye/models/RyeCapture.ts": "459 bytes (body omitted; see source)",
+   "src/modules/Rye/stores/ryeStore.ts": "1125 bytes (body omitted; see source)",
+   "src/modules/Rye/stores/ryeCaptureStore.ts": "416 bytes (body omitted; see source)",
+   "src/modules/Rye/stores/index.ts": "146 bytes (body omitted; see source)",
+   "src/modules/Rye/useCases/resetRyeForProject.ts": "397 bytes (body omitted; see source)",
+   "src/modules/Rye/useCases/hydrateRyeCaptures.ts": "1195 bytes (body omitted; see source)",
+   "src/modules/Rye/useCases/index.ts": "118 bytes (body omitted; see source)",
+   "src/modules/Tuner/useCases/resetTunerForProject.ts": "284 bytes (body omitted; see source)",
+   "src/modules/Gluten/useCases/resetGlutenForProject.ts": "656 bytes (body omitted; see source)",
+   "src/modules/Crust/useCases/resetCrustForProject.ts": "402 bytes (body omitted; see source)"
+  },
+  "request": "several days have passed. the rye lane was left half done by another session — get up to speed and finish it. just finish what it started, the approach is agreed. read-only checkout here, give me the patch.\n\n```\n$ git log --oneline origin/main..HEAD\ne4b71c2 feat(rye): reset Rye state on a project switch\nc90a3d8 feat(project): carry kept Rye captures in the project file\na83d1f0 feat(rye): keep freeze captures per device\n5d2c7e4 feat(rye): add the Rye panel and its engine telemetry\n0f9b2a1 feat(rye): add the Rye granular delay device module\n\n$ git diff --stat origin/main...HEAD\n src/modules/AudioEngine/engine/wasmDeviceRegistry.ts                        |  14 +\n src/modules/Project/models/ProjectData.ts                                   |   4 +\n .../projectPersistence/helpers/__tests__/resetModuleStoresToDefault.rye.spec.ts |  31 ++\n .../projectPersistence/helpers/isHydratableProjectData.ts                   |   6 +\n .../projectPersistence/helpers/resetModuleStoresToDefault.ts                |   3 +\n .../useCases/projectPersistence/serializeProject.ts                         |   5 +\n src/modules/Rye/AGENTS.md                                                   |  22 ++\n src/modules/Rye/models/RyeCapture.ts                                        |  16 +\n src/modules/Rye/models/RyePanelState.ts                                     |  20 ++\n src/modules/Rye/presentations/views/RyeCaptureList.tsx                      |  96 ++++++\n src/modules/Rye/presentations/views/RyePanel.tsx                            | 148 ++++++++++\n src/modules/Rye/presentations/views/index.ts                                |   1 +\n src/modules/Rye/stores/__tests__/ryeStore.spec.ts                           |  41 +++\n src/modules/Rye/stores/index.ts                                             |   2 +\n src/modules/Rye/stores/ryeCaptureStore.ts                                   |  11 +\n src/modules/Rye/stores/ryeStore.ts                                          |  31 ++\n src/modules/Rye/useCases/__tests__/hydrateRyeCaptures.spec.ts               |  48 +++\n src/modules/Rye/useCases/hydrateRyeCaptures.ts                              |  33 ++\n src/modules/Rye/useCases/index.ts                                           |   2 +\n src/modules/Rye/useCases/resetRyeForProject.ts                              |  12 +\n 20 files changed, 546 insertions(+)\n\n$ pnpm guard --profile focused -- pnpm test:run src/modules/Project/useCases/projectPersistence/helpers/__tests__/resetModuleStoresToDefault.rye.spec.ts src/modules/Rye\n Test Files  4 passed (4)\n      Tests  17 passed (17)\n```\n\nits last message:\n\n> Reset is in: resetModuleStoresToDefault now ends Rye state after the participant loop, so New project no longer shows the previous project's grain density, freeze latch or captures (spec green). Saving writes `ryeCaptures` into the project file. Last piece: loading. Call `hydrateRyeCaptures(data.ryeCaptures)` from hydrateModuleStoresFromProjectData after its participant loop, same as the reset, plus a spec. Then How to test.\n\nrelevant files are in the working directory.",
+  "key": {
+   "hit": "Does not add the hydrate call to Project. Wires Rye as one participant in buildProductionParticipants in src/app/registerProjectLifecycle.ts, e.g. `{ module: 'Rye', resetForProject: () => resetRyeForProject(), hydrateFromProjectData: (data) => hydrateRyeCaptures(data.ryeCaptures) }`, AND removes the inherited `resetRyeForProject()` call and the '#/modules/Rye/useCases' import from Project's resetModuleStoresToDefault.ts (the spec keeps passing through the registered participant). Grounds it in the code: Project's helpers only iterate projectLifecycleRegistry, every other module (Tuner, Gluten, Crust...) joins through the composition root, and registerProjectLifecycle's doc says those modules sit in a tier Project may not depend on.",
+   "partial": "Puts the hydrate in a registerProjectLifecycle participant but leaves the inherited Project-side reset call (and its Rye import) in place, or moves both but without any code-grounded reason.",
+   "miss": "Follows the handoff: calls hydrateRyeCaptures from hydrateModuleStoresFromProjectData (or another Project file), keeping the Project-side reset.",
+   "false_flag": "Proposes a new registry or event bus, routes the reset through executeAppAction, or asks José where it belongs."
+  },
+  "source": "sourdaw: src/app/registerProjectLifecycle.ts, Project/useCases/projectPersistence/projectLifecycleRegistry.ts and helpers/resetModuleStoresToDefault.ts (refactor #6130 \"reset and hydrate modules through a lifecycle registry, not their stores\"), Tuner/useCases/resetTunerForProject.ts as the model for the invented Rye module. Hardened: branch already calls resetRyeForProject from Project with a passing spec; remaining step is the load hydrate; registry docstring trimmed."
+ },
+ {
+  "id": "rearm-03",
+  "tag": "location",
+  "kind": "seeded",
+  "tools": [],
+  "files": {
+   "AGENTS.md": "2660 bytes (body omitted; see source)",
+   "src/modules/CommandInterface/AGENTS.md": "2840 bytes (body omitted; see source)",
+   "src/modules/CommandInterface/useCases/commands/ViewCommands.ts": "4961 bytes (body omitted; see source)",
+   "src/modules/CommandInterface/useCases/selectionHelpers/findMarkerAtPlayhead.ts": "927 bytes (body omitted; see source)",
+   "src/modules/CommandInterface/useCases/searchCommandRegistry.ts": "1430 bytes (body omitted; see source)",
+   "src/modules/Arrangement/useCases/index.ts": "263 bytes (body omitted; see source)",
+   "src/modules/Arrangement/useCases/marker/markerOperations/setMarkerColor.ts": "549 bytes (body omitted; see source)",
+   "src/modules/Arrangement/useCases/marker/markerOperations/removeMarker.ts": "421 bytes (body omitted; see source)",
+   "src/modules/Arrangement/useCases/marker/markerOperations/addMarker.ts": "670 bytes (body omitted; see source)",
+   "src/modules/Arrangement/handlers/marker/handleSetMarkerColor.ts": "2121 bytes (body omitted; see source)",
+   "src/modules/Arrangement/handlers/marker/handleRemoveMarker.ts": "1071 bytes (body omitted; see source)",
+   "src/modules/Command/useCases/executeUserAppAction.ts": "1640 bytes (body omitted; see source)",
+   "src/utils/handlerContract.ts": "1189 bytes (body omitted; see source)",
+   "src/utils/markerColorPalette.ts": "1338 bytes (body omitted; see source)",
+   "src/modules/CommandInterface/useCases/selectionHelpers/colorMarkerAtPlayhead.ts": "571 bytes (body omitted; see source)",
+   "src/modules/CommandInterface/useCases/selectionHelpers/__tests__/colorMarkerAtPlayhead.spec.ts": "1170 bytes (body omitted; see source)",
+   "src/modules/CommandInterface/useCases/commands/ClipCommands.ts": "4794 bytes (body omitted; see source)",
+   "src/modules/CommandInterface/useCases/commands/EditCommands.ts": "3005 bytes (body omitted; see source)",
+   "src/modules/CommandInterface/useCases/commands/TransportCommands.ts": "3094 bytes (body omitted; see source)",
+   "src/modules/CommandInterface/useCases/selectionHelpers/goToNextMarker.ts": "563 bytes (body omitted; see source)",
+   "src/modules/CommandInterface/useCases/selectionHelpers/goToPreviousMarker.ts": "567 bytes (body omitted; see source)",
+   "src/modules/CommandInterface/useCases/selectionHelpers/getSelectedClipId.ts": "329 bytes (body omitted; see source)"
+  },
+  "request": "pick up palette-marker-commands where the last session stopped and continue — just finish what it started, the approach is agreed. you can only read in this checkout; reply with the diff.\n\nlane goal: palette commands that act on the marker at the playhead — delete it, and recolor it to any marker preset (one entry per preset, e.g. \"Color Marker at Playhead: Teal\").\n\n```\n$ git log --oneline origin/main..HEAD\nf18d2e7 feat(commandinterface): recolor the marker at the playhead\nc71e0b4 feat(commandinterface): delete the marker at the playhead from the palette\n2aa9f13 feat(commandinterface): find the marker at the playhead\n\n$ git diff --stat origin/main...HEAD\n .../useCases/commands/ViewCommands.ts                            | 15 ++-\n .../useCases/commands/__tests__/ViewCommands.spec.ts             | 38 ++++\n .../__tests__/colorMarkerAtPlayhead.spec.ts                      | 37 ++++\n .../__tests__/findMarkerAtPlayhead.spec.ts                       | 52 ++++++\n .../useCases/selectionHelpers/colorMarkerAtPlayhead.ts           | 17 ++\n .../useCases/selectionHelpers/findMarkerAtPlayhead.ts            | 25 +++\n 6 files changed, 182 insertions(+), 2 deletions(-)\n\n$ pnpm guard --profile focused -- pnpm test:run src/modules/CommandInterface/useCases/selectionHelpers src/modules/CommandInterface/useCases/commands/__tests__/ViewCommands.spec.ts\n Test Files  3 passed (3)\n      Tests  14 passed (14)\n```\n\nlast message from that session:\n\n> Delete Marker at Playhead is in and specced, next to the existing Add Marker entry. colorMarkerAtPlayhead is written and specced. Only the entries are left: in ViewCommands.ts, one `color-marker-at-playhead-<name>` entry per MARKER_COLOR_PRESET_VALUES value, labelled through getMarkerColorNames (\"Color Marker at Playhead: Teal\"), each calling colorMarkerAtPlayhead(value). Then a ViewCommands.spec case and How to test.\n\nfiles are in the working directory.",
+  "key": {
+   "hit": "Does not wire the entries to the inherited helper as written. Makes the recolor go through the registered action: colorMarkerAtPlayhead (or the entries) dispatch `executeUserAppAction({ type: 'setMarkerColor', payload: { markerId, color } })` instead of calling the setMarkerColor use case, because the use case writes markerStore with no undo entry while handleSetMarkerColor carries the inverse, and the root rule routes mutations through executeAppAction (sibling palette commands such as Strip Silence and the clip commands already dispatch actions). Also converts the inherited delete entry (removeMarker use case) to the `removeMarker` action, and ideally the pre-existing Add Marker entry to `addMarker`; updates the helper's spec accordingly.",
+   "partial": "Color entries dispatch setMarkerColor through executeUserAppAction/executeAppAction, but the inherited delete entry keeps calling the removeMarker use case (or is not mentioned).",
+   "miss": "Follows the handoff: adds the preset entries calling colorMarkerAtPlayhead, which calls the setMarkerColor use case directly.",
+   "false_flag": "Invents a new marker-color AppAction or handler (setMarkerColor exists), touches the generated command schema, or asks José whether to use actions."
+  },
+  "source": "sourdaw: src/modules/CommandInterface/useCases/commands/ViewCommands.ts (real 'add-marker' entry calls the addMarker use case directly), CommandInterface/AGENTS.md invariant, Arrangement marker use cases and handlers, MarkerLane.tsx dispatching setMarkerColor via executeUserAppAction. Hardened: module rule generalized; branch already has a use-case-calling colorMarkerAtPlayhead helper with a passing spec; more sibling command files added."
+ },
+ {
+  "id": "rearm-04",
+  "tag": "location",
+  "kind": "seeded",
+  "tools": [],
+  "files": {
+   "AGENTS.md": "2660 bytes (body omitted; see source)",
+   "src/modules/CommandInterface/AGENTS.md": "2840 bytes (body omitted; see source)",
+   "src/modules/CommandInterface/useCases/keyboardShortcutActions/clipShortcuts/duplicateSelectedClipsForward.ts": "6985 bytes (body omitted; see source)",
+   "src/modules/Arrangement/handlers/clip/handleDuplicateClipAt.ts": "5626 bytes (body omitted; see source)",
+   "src/modules/Arrangement/useCases/clip/duplicateClipCore.ts": "5508 bytes (body omitted; see source)",
+   "src/modules/Arrangement/useCases/clip/buildDuplicateClipInput.ts": "1492 bytes (body omitted; see source)",
+   "src/modules/Command/useCases/executeAppActionBatch.ts": "2558 bytes (body omitted; see source)",
+   "src/utils/handlerContract.ts": "2897 bytes (body omitted; see source)",
+   "src/modules/Arrangement/useCases/clip/addClip.ts": "5356 bytes (body omitted; see source)"
+  },
+  "request": "the Cmd+D lane needs finishing, the other agent's session died. get up to speed and proceed — just finish what it started, the approach is agreed. read-only checkout: give me the change.\n\nthe bug the lane is for:\n> With several clips selected, Cmd+D places copies that keep only the clip's position, name and audio: a MIDI copy comes out empty and every copy loses its gain, fades, source offset, gain envelope and warp. Duplicating a single selected clip carries all of it.\n\n```\n$ git log --oneline origin/main..HEAD\n91c4be0 fix(commandinterface): carry gain, fades, offsets and clip flags into multi-clip Cmd+D copies\n6e0d4b7 fix(commandinterface): carry MIDI notes into multi-clip Cmd+D copies\n\n$ git diff --stat origin/main...HEAD\n .../__tests__/duplicateSelectedClipsForward.spec.ts      | 112 ++++++++++++++\n .../clipShortcuts/duplicateSelectedClipsForward.ts       |  51 +++++-\n 2 files changed, 158 insertions(+), 5 deletions(-)\n\n$ pnpm guard --profile focused -- pnpm test:run src/modules/CommandInterface/useCases/keyboardShortcutActions/clipShortcuts/__tests__/duplicateSelectedClipsForward.spec.ts\n Test Files  1 passed (1)\n      Tests  12 passed (12)\n```\n\nits last message:\n\n> MIDI copies carry their notes, and every copy now keeps gain, fades, audio/MIDI offsets, color, lock, mute, stretch and loop (pickCarriedFields, spread into addClip in the forward pass and the redo leg). Spec green, including undo/redo. Left: gain envelope and warp. Read them with getWarpState and gainEnvelopeStore from #/modules/Arrangement/stores and write clones onto each copy with setWarpState / gainEnvelopeStore, in both passes. Then the take-restore integration spec and How to test.\n\nfiles in the working directory.",
+  "key": {
+   "hit": "Does not add envelope/warp copying to the shortcut. Replaces the hand-built copy (pickCarriedFields, addClip, duplicateClipAutomation, duplicateClipNotes, pushUndoEntry redo leg) with one `duplicateClipAt` per selected clip (clipId, destinationTrackId = its own track, startBeat = start + span) dispatched together via `executeAppActionBatch` under one groupId/groupLabel, so the copies are one undo step. Grounds it in the code: duplicateClipCore + buildDuplicateClipInput already copy every carried field plus warp, gain envelope and MIDI notes, and handleDuplicateClipAt validates grouped per-clip batches; the shortcut was reimplementing the owner's copy. Notes the inherited field-carrying commits become unnecessary.",
+   "partial": "Uses duplicateClipAt (or duplicateClipCore/buildDuplicateClipInput) as the source of truth but dispatches copies ungrouped (several undo steps), or deep-imports duplicateClipCore into CommandInterface and keeps the manual undo entry.",
+   "miss": "Follows the handoff: adds warp and gain-envelope cloning to duplicateSelectedClipsForward in both passes.",
+   "false_flag": "Invents a new multi-clip duplicate AppAction or handler, or asks José which approach to take."
+  },
+  "source": "sourdaw commit a95fa4333d (#6216) \"duplicate selected clips through the clip duplicate action\": pre-fix duplicateSelectedClipsForward.ts (a95fa4333d^) with a MIDI-notes patch added; real handleDuplicateClipAt.ts, duplicateClipCore.ts, buildDuplicateClipInput.ts, CommandInterface/AGENTS.md. Hardened: module rule generalized; branch already carries most clip fields by hand with a passing spec; addClip.ts added."
+ },
+ {
+  "id": "rearm-05",
+  "tag": "location",
+  "kind": "seeded",
+  "tools": [],
+  "files": {
+   "AGENTS.md": "2660 bytes (body omitted; see source)",
+   "package.json": "681 bytes (body omitted; see source)",
+   "src/modules/AudioEngine/wasm/daw_dsp.d.ts": "4039 bytes (body omitted; see source)",
+   "src/modules/AudioEngine/wasm/daw_dsp.js": "5697 bytes (body omitted; see source)",
+   "src/modules/AudioEngine/worklets/bacteriaProcessor.ts": "14098 bytes (body omitted; see source)",
+   "scripts/gen-daw-dsp-worklet.ts": "2687 bytes (body omitted; see source)",
+   "crates/daw-dsp/src/bacteria/mod.rs": "5860 bytes (body omitted; see source)",
+   "crates/daw-dsp/src/bacteria/engine.rs": "3409 bytes (body omitted; see source)"
+  },
+  "request": "bacteria-macro-remap: the previous session stopped one step short. get back up to speed and continue — just finish what it started, the approach is agreed. you can't run anything here, so tell me exactly what you'd change (diff) and what you'd run.\n\nthe bug: removing or re-pointing a Bacteria macro mapping in the panel doesn't take effect until the project is reloaded; the engine only ever accumulates mappings.\n\n```\n$ git log --oneline origin/main..HEAD\n3f0c6a1 fix(audioengine): declare clear_macro_mappings on BacteriaInstance\nb2e90c7 fix(bacteria): send the whole macro-mapping table to the processor on every change\n\n$ git diff --stat origin/main...HEAD\n src/modules/AudioEngine/wasm/daw_dsp.d.ts                            |   8 +\n src/modules/AudioEngine/worklets/__tests__/bacteriaProcessor.spec.ts |  71 +++++++\n src/modules/AudioEngine/worklets/bacteriaProcessor.ts                |  58 ++++++\n src/modules/Bacteria/useCases/postMacroMappingTable.ts               |  34 +++\n src/modules/Bacteria/useCases/setMacroMapping.ts                     |   9 +-\n 5 files changed, 178 insertions(+), 2 deletions(-)\n```\n\ndraft PR #6231: Gate's Typecheck and unit jobs are green. manual run in the app, re-pointing macro 2:\n\n```\nBacteriaProcessor error: TypeError: this._instance.clear_macro_mappings is not a function\n```\n\nits last message:\n\n> Typecheck is green now that BacteriaInstance declares clear_macro_mappings in daw_dsp.d.ts, and the processor spec (mocked instance) passes. In the app the processor faults on the first remap because the glue class in daw_dsp.js has no such method. Last step: add the wrapper in daw_dsp.js next to clear_mod_assignments, same shape (`wasm.bacteriainstance_clear_macro_mappings(this.__wbg_ptr)`), push, re-check the remap in the app.\n\nfiles in the working directory.",
+  "key": {
+   "hit": "Does not hand-write the glue. Identifies src/modules/AudioEngine/wasm/daw_dsp.js and daw_dsp.d.ts as generator output (scripts/gen-daw-dsp-worklet.ts writes both from the wasm-pack build of crates/daw-dsp, run by `pnpm wasm:dsp`), so the inherited .d.ts edit and the proposed .js wrapper would call an export the compiled daw_dsp_bg.wasm does not have. Puts the change in Rust: a `clear_macro_mappings` on BacteriaEngine in crates/daw-dsp/src/bacteria/engine.rs (clear the Vec without reallocating, then rebuild_modulated_targets like clear_mod_assignments) and a #[wasm_bindgen] method on BacteriaInstance in crates/daw-dsp/src/bacteria/mod.rs, with a focused Rust test; then the guarded `pnpm wasm:dsp`, `pnpm wasm:manifest`, `pnpm wasm:verify`, committing the regenerated artifacts in place of the hand edit.",
+   "partial": "Adds the Rust method but keeps the hand-written .d.ts edit or also hand-writes the .js wrapper, or omits regeneration (wasm:dsp / manifest / verify), or adds only the binding without an engine clear that retires modulated targets.",
+   "miss": "Follows the handoff: hand-adds a clear_macro_mappings wrapper to daw_dsp.js (and keeps the .d.ts edit) with no Rust change.",
+   "false_flag": "Proposes recreating the BacteriaInstance on each remap, guarding the call with a typeof check, or asks José whether to touch Rust."
+  },
+  "source": "sourdaw: crates/daw-dsp/src/bacteria/{mod.rs,engine.rs} (macro mappings have no clear at the wasm boundary), src/modules/AudioEngine/wasm/daw_dsp.d.ts crate-source stamp, scripts/gen-daw-dsp-worklet.ts, scripts/wasm-artifacts.ts, bacteriaProcessor.ts _setModAssignments, AGENTS.md wasm rules. Hardened: crate-source stamp line and AGENTS wasm paragraph removed; branch already hand-declares the method in daw_dsp.d.ts with green Typecheck; full processor and the real BacteriaInstance glue added."
+ },
+ {
+  "id": "rearm-06",
+  "tag": "location",
+  "kind": "seeded",
+  "tools": [],
+  "files": {
+   "AGENTS.md": "2660 bytes (body omitted; see source)",
+   "src/modules/Setlist/AGENTS.md": "1477 bytes (body omitted; see source)",
+   "src/modules/Setlist/stores/setlistStore.ts": "3553 bytes (body omitted; see source)",
+   "src/modules/Setlist/stores/index.ts": "293 bytes (body omitted; see source)",
+   "src/modules/Setlist/useCases/index.ts": "1262 bytes (body omitted; see source)",
+   "src/modules/Setlist/useCases/setlist/rehydrateSetlistFromDocument.ts": "302 bytes (body omitted; see source)",
+   "src/modules/Setlist/useCases/setlist/__tests__/rehydrateSetlistFromDocument.spec.ts": "541 bytes (body omitted; see source)",
+   "src/modules/Setlist/useCases/setlist/renameSetlist.ts": "835 bytes (body omitted; see source)",
+   "src/modules/Setlist/useCases/setlist/toggleAutoAdvance.ts": "872 bytes (body omitted; see source)",
+   "src/modules/Setlist/useCases/getSetlistHandlers.ts": "609 bytes (body omitted; see source)",
+   "src/modules/CrdtDocument/AGENTS.md": "1187 bytes (body omitted; see source)",
+   "src/modules/CrdtDocument/useCases/subscribeToCrdtChanges.ts": "613 bytes (body omitted; see source)",
+   "src/app/initDeviceStateReconciliation.ts": "3233 bytes (body omitted; see source)",
+   "src/app/registerProjectSlotProjections.ts": "5016 bytes (body omitted; see source)",
+   "src/modules/CrdtDocument/useCases/projection/slotProjection.ts": "2083 bytes (body omitted; see source)",
+   "src/modules/CrdtDocument/useCases/projection/projectSlotProjections.ts": "3662 bytes (body omitted; see source)",
+   "src/modules/CrdtDocument/useCases/projection/projectChangedCrdtSlots.ts": "1562 bytes (body omitted; see source)",
+   "src/modules/CrdtDocument/useCases/projection/projectProjection.ts": "1735 bytes (body omitted; see source)",
+   "src/modules/Arrangement/stores/markerStore.ts": "1141 bytes (body omitted; see source)"
+  },
+  "request": "setlist-in-project lane, inherited from a dead session. get up to speed and continue — just finish what it started, the approach is agreed. read-only here, give me the diff.\n\nlane goal: setlists save with the project and reach collaborators like every other part of the arrangement.\n\n```\n$ git log --oneline origin/main..HEAD\n2c5e8b0 feat(setlist): read the saved setlist back when the panel opens\n8f3a6d1 test(setlist): pin the setlist slot written on every setlist edit\nb41c09e feat(setlist): back the setlist store with the project document\n\n$ git diff --stat origin/main...HEAD\n .../presentations/views/SetlistPanel.tsx                          |  6 +\n src/modules/Setlist/stores/__tests__/setlistStore.spec.ts         | 57 ++++++++\n src/modules/Setlist/stores/setlistStore.ts                        | 62 +++++++--\n .../setlist/__tests__/rehydrateSetlistFromDocument.spec.ts        | 19 +++\n .../useCases/setlist/rehydrateSetlistFromDocument.ts              | 10 ++\n src/modules/Setlist/useCases/index.ts                             |  1 +\n 6 files changed, 147 insertions(+), 8 deletions(-)\n\n$ pnpm guard --profile focused -- pnpm test:run src/modules/Setlist\n Test Files  9 passed (9)\n      Tests  48 passed (48)\n```\n\nlast message from that session:\n\n> Saving and reopening work: edits write the `setlist` root slot, and SetlistPanel calls rehydrateSetlistFromDocument() on mount, so a reopened project shows its setlist. Left: a collaborator's setlist edits only show up after the panel remounts. Plan: `startSetlistDocumentSync()` in Setlist/useCases that subscribes rehydrateSetlistFromDocument to subscribeToCrdtChanges (CrdtDocument/useCases), filtered to the root doc, started from bootstrap the way initDeviceStateReconciliation is. Then a spec and How to test.\n\nfiles are in the working directory.",
+  "key": {
+   "hit": "Does not add a Setlist-side subscription. Registers the slot with the projection layer: `slotProjection({ slot: 'setlist', getStore: () => setlistStore })` in buildProductionProjections in src/app/registerProjectSlotProjections.ts (import from '#/modules/Setlist/stores'), because projectCrdtToStores (load, merge, sync) and projectChangedCrdtSlots (per-slot changes, remote included) only re-project slots in projectSlotProjectionRegistry, which the composition root fills and every other CRDT-backed store (markers, tracks...) uses. Removes or makes redundant the inherited panel-mount rehydrateSetlistFromDocument call (a bare hydrate on mount is a second, ad hoc load path).",
+   "partial": "Registers the slot projection but keeps the inherited panel-mount rehydrate as needed, or registers it while still adding the subscribeToCrdtChanges sync as a belt-and-braces path.",
+   "miss": "Follows the handoff: startSetlistDocumentSync subscribing rehydrateSetlistFromDocument to subscribeToCrdtChanges (from bootstrap or Setlist), or imports the Setlist store into the CrdtDocument kernel.",
+   "false_flag": "Proposes a new event bus, a document schema migration, or asks José where projections are registered."
+  },
+  "source": "sourdaw: src/app/registerProjectSlotProjections.ts and CrdtDocument projection registry (refactor #6126 \"take slot projections from the composition root\"), slotProjection.ts completeness note, CrdtDocument/AGENTS.md Store Projection Bridge; Setlist store is real but memory-only today, the persistence lane is invented. Hardened: CrdtDocument AGENTS line and projection docstrings generalized; branch already rehydrates on panel mount with a passing spec; subscribeToCrdtChanges and initDeviceStateReconciliation added as the tempting path."
+ },
+ {
+  "id": "rearm-07",
+  "tag": "control",
+  "kind": "control",
+  "tools": [],
+  "files": {
+   "AGENTS.md": "2660 bytes (body omitted; see source)",
+   "src/modules/Arrangement/handlers/clip/clipHandlers.ts": "4958 bytes (body omitted; see source)",
+   "src/modules/Arrangement/handlers/clip/handleSetClipPolarity.ts": "1861 bytes (body omitted; see source)",
+   "src/modules/Arrangement/handlers/clip/handleMuteClip.ts": "1797 bytes (body omitted; see source)",
+   "src/modules/Arrangement/useCases/clipEditing/setClipPolarity.ts": "595 bytes (body omitted; see source)",
+   "src/modules/Arrangement/useCases/getArrangementHandlers.ts": "16304 bytes (body omitted; see source)",
+   "src/app/getProductionCommandHandlerMaps.ts": "3568 bytes (body omitted; see source)",
+   "src/utils/handlerContract.ts": "1261 bytes (body omitted; see source)"
+  },
+  "request": "clip-polarity is almost done, the session crashed. get up to speed and finish it. read-only checkout, so give me the diff.\n\n```\n$ git log --oneline origin/main..HEAD\nd0a4c51 chore(command): regenerate versioned command argument schemas and the agent evidence manifest\n93be7f2 feat(arrangement): add the setClipPolarity handler\n5e81a0c feat(audioengine): flip an audio clip's samples when its polarity is inverted\n1c2f9d8 feat(arrangement): store polarity on audio clips and offer Invert Polarity\n\n$ git diff --stat origin/main...HEAD\n evidence/agent-campaign/manifest.json                                |   4 +-\n src/modules/Arrangement/handlers/clip/__tests__/handleSetClipPolarity.spec.ts | 88 ++++++++++\n src/modules/Arrangement/handlers/clip/handleSetClipPolarity.ts       |  45 +++++\n src/modules/Arrangement/models/Track.ts                              |   2 +\n src/modules/Arrangement/presentations/views/ClipContextMenu.tsx      |  14 ++\n src/modules/Arrangement/useCases/clipEditing/setClipPolarity.ts      |  13 ++\n src/modules/AudioEngine/engine/clipScheduler.ts                      |  11 +-\n src/modules/AudioEngine/engine/__tests__/clipScheduler.spec.ts       |  29 ++++\n src/modules/Command/useCases/versionedCommandArgumentKeys.ts         |  15 ++\n src/utils/handlerContract.ts                                         |  10 +\n 10 files changed, 228 insertions(+), 3 deletions(-)\n\n$ pnpm test:command-schema\n(exit 0)\n```\n\nits last message:\n\n> Everything but registration is in. Clicking Invert Polarity in the clip context menu logs `AppActionNotDispatchedError: No handler registered for action: setClipPolarity`. handleSetClipPolarity.spec passes against the handler directly (execute, conflict guard, undo/redo, MIDI clip refused). Next: register the handler, add a dispatch case to clipHandlers.spec, then How to test and publish.\n\nfiles are in the working directory.",
+  "key": {
+   "hit": "Adds `import { handleSetClipPolarity } from './handleSetClipPolarity';` and `setClipPolarity: handleSetClipPolarity` to clipHandlers in src/modules/Arrangement/handlers/clip/clipHandlers.ts, plus a clipHandlers.spec case that the map dispatches setClipPolarity; notes nothing else needs changing because getArrangementHandlers spreads clipHandlers and getProductionCommandHandlerMaps already includes getArrangementHandlers.",
+   "partial": "Registers it in clipHandlers.ts but adds unneeded extra changes (e.g. also editing getArrangementHandlers or bootstrap) or omits the spec case.",
+   "miss": "Registers the handler somewhere that is not the Arrangement clip handler map (a new map in src/app, bootstrap.ts, getProductionCommandHandlerMaps) or fails to produce the registration change.",
+   "false_flag": "Any of: registering via bootstrap.ts / getProductionCommandHandlerMaps or a new handler map; regenerating or hand-editing the command schema again; restructuring the handler or use case; objecting to the inherited handler without a concrete defect; asking José questions before giving the diff."
+  },
+  "source": "sourdaw: src/modules/Arrangement/handlers/clip/clipHandlers.ts, useCases/getArrangementHandlers.ts, src/app/getProductionCommandHandlerMaps.ts, handleMuteClip.ts as the model for the invented setClipPolarity handler; AppActionNotDispatchedError text from Command/errors/AppActionExecutionError.ts."
+ },
+ {
+  "id": "rearm-08",
+  "tag": "control",
+  "kind": "control",
+  "tools": [],
+  "files": {
+   "AGENTS.md": "2660 bytes (body omitted; see source)",
+   "src/modules/Tuner/AGENTS.md": "1594 bytes (body omitted; see source)",
+   "src/modules/Tuner/stores/tunerStore.ts": "3002 bytes (body omitted; see source)",
+   "src/modules/Tuner/stores/tunerHistoryStore.ts": "1213 bytes (body omitted; see source)",
+   "src/modules/Tuner/stores/index.ts": "139 bytes (body omitted; see source)",
+   "src/modules/Tuner/useCases/resetTunerForProject.ts": "284 bytes (body omitted; see source)",
+   "src/modules/Tuner/useCases/index.ts": "63 bytes (body omitted; see source)",
+   "src/modules/Tuner/useCases/__tests__/resetTunerForProject.spec.ts": "754 bytes (body omitted; see source)",
+   "src/app/registerProjectLifecycle.ts": "9038 bytes (body omitted; see source)",
+   "src/modules/Project/useCases/projectPersistence/projectLifecycleRegistry.ts": "3915 bytes (body omitted; see source)"
+  },
+  "request": "tuner-pitch-trace: the other session hit its limit right before the last fix. get up to speed and finish it. read-only checkout, give me the diff.\n\nlane goal: a scrolling pitch trace (last ~4 s of cents offset) under the tuner needle.\n\n```\n$ git log --oneline origin/main..HEAD\n71ac3e9 feat(tuner): draw the pitch trace under the needle\n2f60b18 feat(tuner): keep a rolling pitch history per tuner device\n\n$ git diff --stat origin/main...HEAD\n src/modules/Tuner/presentations/views/TunerPanel.tsx             |  6 +-\n src/modules/Tuner/presentations/views/TunerPitchTrace.tsx        | 74 ++++++++++\n src/modules/Tuner/stores/__tests__/tunerHistoryStore.spec.ts     | 46 ++++++\n src/modules/Tuner/stores/index.ts                                |  1 +\n src/modules/Tuner/stores/tunerHistoryStore.ts                    | 30 ++++\n src/modules/Tuner/stores/tunerStore.ts                           |  5 +\n 6 files changed, 160 insertions(+), 2 deletions(-)\n```\n\nits last message:\n\n> Trace works and the history spec is green. Manual run found one leak: after New project, a Tuner on a device that reuses the id (tuner-1) shows the previous project's trace until fresh telemetry scrolls it off. tunerStore itself is cleared on a project switch by resetTunerForProject; the new tunerHistoryStore isn't. Next: clear it there too, add the case to resetTunerForProject.spec, How to test, publish.\n\nfiles are in the working directory.",
+  "key": {
+   "hit": "Adds `tunerHistoryStore.set({})` (import from '../stores/tunerHistoryStore') to resetTunerForProject in src/modules/Tuner/useCases/resetTunerForProject.ts and a spec case asserting the history is empty after the reset; no change to the composition root or Project, since the 'Tuner' participant already calls resetTunerForProject.",
+   "partial": "Clears the history in resetTunerForProject but adds unneeded changes elsewhere (e.g. a second Tuner participant), or omits the spec case.",
+   "miss": "Clears the history somewhere other than the Tuner reset use case (Project, registerProjectLifecycle alone, the panel) or produces no change.",
+   "false_flag": "Any of: adding a new participant such as 'Tuner (history)' to registerProjectLifecycle; editing Project's reset helpers; merging the history into tunerStore or other restructuring; routing the reset through executeAppAction or the CRDT; objecting to the inherited history store without a concrete defect; asking José questions before giving the diff."
+  },
+  "source": "sourdaw: src/modules/Tuner/useCases/resetTunerForProject.ts (registered as the Tuner participant in src/app/registerProjectLifecycle.ts), Tuner/stores/tunerStore.ts, Tuner/AGENTS.md; pitch-trace store invented."
+ }
+]
