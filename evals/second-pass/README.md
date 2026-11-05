@@ -30,16 +30,17 @@ every arm, in brackets. All other skills ran 2 reps per item and arm.
 
 | Skill | First pass correct | Fix points B / C / C3 | Churn + flip B / C / C3 | in+out B / C | Wall B / C | Verdict |
 | --- | --- | --- | --- | --- | --- | --- |
-| panel | 16/30 | 13 / 9 of 30 [9 / 5.5 / **10** of 20] | 3 / 8 of 15 [1 / 6 / 4 of 10] | 5.5k / 19.4k | 33 / 76 | Stays. Loses to B on fixes, churn and cost. C3 beats current panel on both measures and ties B on fixes; proposed, not shipped. |
+| panel | 16/30 | 13 / 9 of 30 [9 / 5.5 / **10** of 20] | 3 / 8 of 15 [1 / 6 / 4 of 10] | 5.5k / 19.4k | 33 / 76 | Stays. Loses to B on fixes, churn and cost. C3 beats current panel on both measures and ties B on fixes. C3 shipped in cac192e. |
 | settle | 15/30 | 9 / **13.5** of 30 [5.5 / 8.5 / 6 of 20] | 1 / 9 of 15 [0 / 6 / 2 of 10] | 4.9k / 4.7k | 25 / 25 | Stays. Beats B on fixes at equal cost and loses on churn. C2 (12 of 30, churn 10 of 15) does not ship. C3 cut churn but lost the fixes. |
-| bulletproof | 35/50 | 8 / 7 / 8 of 20 | 3 / 7 / **2** of 10 | 6.3k / 9.0k | 32 / 55 | Stays. Loses to B. C3 matches B on fixes, cuts churn to B's level and beats the current skill; proposed, not shipped. |
+| bulletproof | 35/50 | 8 / 7 / 8 of 20 | 3 / 7 / **2** of 10 | 6.3k / 9.0k | 32 / 55 | Stays. Loses to B. C3 matches B on fixes, cuts churn to B's level and beats the current skill. C3 shipped in cac192e. |
 | dissect | 32/42 | 8 / **11.5** / 7.5 of 20 | 1 / 5 / 2 of 10 | 8.0k / 13.3k | 35 / 94 | Stays as is. Beats B on fixes (6 full fixes vs 3) and loses on churn, with no flips. C3 traded the fixes away. |
 | revolver | 37/45 | 2 / 2 of 16 | 4 / 1 of 10 | 15.7k / 55.8k | 49 / 343 | Stays; findings only (below). |
 | drill | 19/30 | 3.5 / **7** of 20 | 2 / 5 of 10 | 24.3k / 22.1k | 89 / 50 | **Keep.** Doubles B's fixes at lower cost and time. 2 of its 5 correct-item hits are flips. |
 | handoff | 36/40 | 3.5 / 3 of 8; C2 3 of 8 | 6 / 4 of 10; C2 5 | 6.6k / 5.0k | 32 / 19 | **Retire candidate.** Plain Opus writes a correct brief 9 times in 10. As a second pass the skill ties B. C2 does not ship. |
 
-**No skill file changes.** The ship rule was that a settle or handoff proposal must beat both the
-current skill and B. Neither did. Every other skill was out of scope for edits.
+**Settle and handoff do not change.** The ship rule was that a settle or handoff proposal must beat
+both the current skill and B. Neither did. After the run, José approved shipping the panel and
+bulletproof C3 texts. They shipped verbatim in cac192e.
 
 No skill fixes most flawed answers, and neither does B. The best fix rate is 0.57 (dissect C). The
 best fix rate for B is 0.44 (handoff). B alone beats or ties the current skill in three places:
@@ -58,7 +59,7 @@ The grader reasons are in `follow.csv`.
     narrative also reopens choices that were already correct.
   - C3 change: list keeping the current behaviour as an option, name the recorded decisions that
     bear on the choice, and never recommend reversing one. If the panel confirms the earlier
-    recommendation, say so in one line and stop. Text: `arms/panel.c3.md`.
+    recommendation, say so in one line and stop. Text: `arms/panel.c3.md`, shipped in cac192e.
   - C3 result: fixes 10 of 20 (6 full) against B 9 and C 5.5. Churn 4 of 10 against B 1 and C 6.
     Token cost is about the same as C (21.0k against 19.4k).
 - **settle.**
@@ -77,7 +78,7 @@ The grader reasons are in `follow.csv`.
     Its long tables end without a corrected conclusion. In 2 runs it invented a counter-mechanism
     and retracted a correct finding.
   - C3 change: an item that a source you opened decides gets `Supported` or `Unsupported`, and the
-    answer is restated after the table. Text: `arms/bulletproof.c3.md`.
+    answer is restated after the table. Text: `arms/bulletproof.c3.md`, shipped in cac192e.
   - C3 result: fixes 8 of 20, matching B. Churn 2 of 10, against 7 for C. 2 runs got worse.
 - **dissect.**
   - Why it lost: it lost only on churn. It adds `Unknown` rows and hedges to traces that were
